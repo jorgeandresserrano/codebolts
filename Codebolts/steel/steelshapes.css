@@ -74,6 +74,7 @@ body{
 	background-color: white;
 	font-size: 15px;
 	color: #6C6C6C;
+	cursor: pointer;
 }
 
 #canvas{
