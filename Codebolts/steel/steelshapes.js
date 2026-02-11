@@ -582,6 +582,8 @@ function showList(){
 	var items = $();
 	var restoredBeamName;
 	var restoredBeamElement;
+	var defaultBeamName;
+	var defaultBeamElement;
 	var restoredScrollTop;
 	var listContainer = document.getElementById('list-container');
 	
@@ -610,7 +612,18 @@ function showList(){
 		selectBeam(restoredBeamName, restoredBeamElement);
 		restoredBeamElement.scrollIntoView({block: 'nearest'});
 	} else {
-		context.clearRect(0, 0, canv.width, canv.height);
+		defaultBeamName = currentShapes.row[currentShapes.row.length - 1].name;
+		defaultBeamElement = document.getElementById(defaultBeamName);
+		if (defaultBeamElement) {
+			if (listContainer) {
+				listContainer.scrollTop = listContainer.scrollHeight;
+				listScrollTopByShapeSet[currentShapeSetKey] = listContainer.scrollTop;
+			}
+			selectBeam(defaultBeamName, defaultBeamElement);
+			defaultBeamElement.scrollIntoView({block: 'end'});
+		} else {
+			context.clearRect(0, 0, canv.width, canv.height);
+		}
 	}
 }
 
