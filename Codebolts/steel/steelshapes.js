@@ -28,7 +28,7 @@ var X0,
 	mass, area,	ix,	sx,	rx,	zx,	iy,	sy,	ry,	zy, j, cw,
 	zoom, showDimensions,
 	currentSpecName, CANADIAN_SPEC_NAME, AMERICAN_SPEC_NAME, EUROPEAN_SPEC_NAME, BRITISH_SPEC_NAME,
-	currentShapeSetKey, selectedBeamByShapeSet;
+	currentShapeSetKey, selectedBeamByShapeSet, listScrollTopByShapeSet;
 
 
 $(document).ready(function() {
@@ -57,6 +57,7 @@ function initializeVariables(){
 	currentSpecName = CANADIAN_SPEC_NAME;
 	currentShapeSetKey = 'canadianShapes';
 	selectedBeamByShapeSet = {};
+	listScrollTopByShapeSet = {};
 	
 	currentShapes = canadianShapes;
 	
@@ -441,6 +442,10 @@ function setCoordDimsAndScale(){
 
 function setMostListeners(){
 
+	$('#list-container').on('scroll', function() {
+		listScrollTopByShapeSet[currentShapeSetKey] = this.scrollTop;
+	});
+
 	$(document).keydown(function(e) {
 		var ele = $('#list-container');
 		var scroll = 29; // Which is height + padding-top
@@ -494,9 +499,13 @@ function setMostListeners(){
 	
 	$(".shapes").click(function(){
 		var shapeSelection = $(this).attr('id');
+		var listContainer = document.getElementById('list-container');
 		
 		if (beamName && currentShapeSetKey) {
 			selectedBeamByShapeSet[currentShapeSetKey] = beamName;
+		}
+		if (currentShapeSetKey && listContainer) {
+			listScrollTopByShapeSet[currentShapeSetKey] = listContainer.scrollTop;
 		}
 		
 		switch(shapeSelection){
@@ -573,6 +582,8 @@ function showList(){
 	var items = $();
 	var restoredBeamName;
 	var restoredBeamElement;
+	var restoredScrollTop;
+	var listContainer = document.getElementById('list-container');
 	
 	// deleting previuos list, if any
 	$('#list-container').html('');
@@ -585,6 +596,11 @@ function showList(){
 	
 	setMouseHoverListener();
 	
+	restoredScrollTop = listScrollTopByShapeSet[currentShapeSetKey];
+	if (listContainer && restoredScrollTop !== undefined) {
+		listContainer.scrollTop = restoredScrollTop;
+	}
+	
 	restoredBeamName = selectedBeamByShapeSet[currentShapeSetKey];
 	if (restoredBeamName) {
 		restoredBeamElement = document.getElementById(restoredBeamName);
@@ -592,6 +608,7 @@ function showList(){
 	
 	if (restoredBeamElement) {
 		selectBeam(restoredBeamName, restoredBeamElement);
+		restoredBeamElement.scrollIntoView({block: 'nearest'});
 	} else {
 		context.clearRect(0, 0, canv.width, canv.height);
 	}
