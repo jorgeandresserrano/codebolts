@@ -91,10 +91,11 @@ body{
 
 .button{
 	padding-left: 8px;
-	padding-top: 8px;
+	padding-top: 0;
 	
 	width: 140px;
 	height: 31px;
+	line-height: 31px;
 	background-color: white;
 	
 	font-family: 'Roboto', sans-serif;
