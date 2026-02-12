@@ -9,6 +9,7 @@
 
  "use strict";
  
+// Canvas and drawing configuration.
 var X0,
 	Y0,
 	AVAILABLE_BEAM_HEIGHT_PIXELS,
@@ -17,18 +18,45 @@ var X0,
 	LINE_WIDTH,
 	LINE_COLOR,
 	FILL_COLOR,
-	currentShapes, canadianShapes, americanShapes, europeanShapes, britishShapes,
+	canv,
+	context;
+
+// Shapes data and selected shape state.
+var currentShapes, canadianShapes, americanShapes, europeanShapes, britishShapes,
 	beamCoordinates,
 	beamName,
-	canv,
-	context,
 	xArray,	yArray,
-	b, d, t, w, k, k1,
-	b_det, d_det, t_det, w_det, k_det, k1_det,
-	mass, area,	ix,	sx,	rx,	zx,	iy,	sy,	ry,	zy, j, cw,
-	zoom, showDimensions,
-	currentSpecName, CANADIAN_SPEC_NAME, AMERICAN_SPEC_NAME, EUROPEAN_SPEC_NAME, BRITISH_SPEC_NAME,
-	currentShapeSetKey, selectedBeamByShapeSet, listScrollTopByShapeSet;
+	currentShapeSetKey, selectedBeamByShapeSet, listScrollTopByShapeSet, selectedSectionTypeByShapeSet;
+
+// Current section dimensions.
+var b, d, t, w, k, k1, sectionType, flangeTipThickness, flangeWebThickness, flangeThicknessReferenceHalfWidth;
+
+// Current section properties.
+var mass, area,	ix,	sx,	rx,	zx,	iy,	sy,	ry,	zy, j, cw;
+
+// UI state and specification names.
+var zoom, showDimensions,
+	currentSpecName, CANADIAN_SPEC_NAME, AMERICAN_SPEC_NAME, EUROPEAN_SPEC_NAME, BRITISH_SPEC_NAME;
+
+// Fixed UI layout and drawing constants.
+var CANVAS_WIDTH = 580,
+	CANVAS_HEIGHT = 650,
+	TITLE_Y = 490,
+	SPEC_Y = 505,
+	PROPERTY_X_COL_1 = 20,
+	PROPERTY_X_COL_2 = 210,
+	PROPERTY_X_COL_3 = 400,
+	PROPERTY_Y_ROW_1 = 540,
+	PROPERTY_ROW_STEP = 30,
+	GRAVITY = 9.80665;
+
+var PROPERTY_LABELS = ['title', 'Dead Load: ', 'Area: ', 'Ix: ', 'Sx: ', 'rx: ', 'Zx: ', 'Iy: ', 'Sy: ', 'ry: ', 'Zy: ', 'J: ', 'Cw: '];
+var PROPERTY_X_LAYOUT = [0, PROPERTY_X_COL_1, PROPERTY_X_COL_1, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_1, PROPERTY_X_COL_1];
+var PROPERTY_Y_LAYOUT = [0, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP)];
+
+var INSIDE_ARC_SEGMENT_INDEX = {3: true, 4: true, 9: true, 10: true};
+var OUTSIDE_ARC_SEGMENT_INDEX = {2: true, 5: true, 8: true, 11: true};
+var S_FLANGE_INNER_FACE_SLOPE = 2 / 12;
 
 
 $(document).ready(function() {
@@ -40,24 +68,69 @@ $(document).ready(function() {
 		$('#IE').show();
 	 }
 	 
-	 initializeVariables();
+	initializeVariables();
 	showList();
 	setMostListeners();
 	// List's listener is set in its function.
 	
-});
+	});
+
+
+function toCrispPixel(value){
+	// Draw on half pixels to keep 1px strokes crisp on canvas.
+	return Math.round(value) + 0.5;
+}
+
+
+function toInt(value){
+	return parseInt(value, 10);
+}
+
+
+function isAmericanSpec(){
+	return currentSpecName === AMERICAN_SPEC_NAME;
+}
+
+
+function getDeadLoadValue(){
+	if (isAmericanSpec()){
+		return mass;
+	}
+	return Math.round((mass * GRAVITY / 1000) * 100) / 100;
+}
+
+
+function getPropertyUnitsForSpec(){
+	if (currentSpecName === CANADIAN_SPEC_NAME){
+		return ['', 'kN/m', 'mm^2', 'x10^6 mm^4', 'x10^3 mm^3', 'mm', 'x10^3 mm^3', 'x10^6 mm^4', 'x10^3 mm^3', 'mm', 'x10^3 mm^3', 'x10^3 mm^4', 'x10^9 mm^6'];
+	}
+	if (currentSpecName === AMERICAN_SPEC_NAME){
+		return ['', 'lb/ft', 'in^2', 'in^4', 'in^3', 'in', 'in^3', 'in^4', 'in^3', 'in', 'in^3', 'in^4', 'in^6'];
+	}
+	// European and British datasets share the same units.
+	return ['', 'kN/m', 'mm^2', 'x10^4 mm^4', 'x10^3 mm^3', 'x10 mm', 'x10^3 mm^3', 'x10^4 mm^4', 'x10^3 mm^3', 'x10 mm', 'x10^3 mm^3', 'x10^4 mm^4', 'x10^9 mm^6'];
+}
+
+
+function getPropertyValues(){
+	return [beamName, getDeadLoadValue(), area, ix, sx, rx, zx, iy, sy, ry, zy, j, cw];
+}
 
 
 function initializeVariables(){
 	
 	CANADIAN_SPEC_NAME = 'CISC Section Tables_SST92';
-	AMERICAN_SPEC_NAME = 'AISC Shapes Database v14.1';
+	AMERICAN_SPEC_NAME = 'AISC Shapes Database v16.0';
 	EUROPEAN_SPEC_NAME = 'ArcelorMittal 2014_1';
 	BRITISH_SPEC_NAME = 'ArcelorMittal 2014_1';
 	currentSpecName = CANADIAN_SPEC_NAME;
 	currentShapeSetKey = 'canadianShapes';
 	selectedBeamByShapeSet = {};
 	listScrollTopByShapeSet = {};
+	selectedSectionTypeByShapeSet = {
+		canadianShapes: 'W',
+		americanShapes: 'W'
+	};
 	
 	currentShapes = canadianShapes;
 	
@@ -74,8 +147,8 @@ function initializeVariables(){
 	
 	beamCoordinates = [];
 	canv = document.getElementById("canvas");
-	canv.width = 580;
-	canv.height = 650;
+	canv.width = CANVAS_WIDTH;
+	canv.height = CANVAS_HEIGHT;
 	X0 = Math.round(canv.width/2);
 	Y0 = 25;
 	context = canv.getContext("2d");
@@ -88,35 +161,50 @@ function drawBeam(){
 	
 	setCoordDimsAndScale();
 	
-	var points = beamCoordinates[0].length; // will be the same as 'beamCoordinates[1].length'
+	if (!beamCoordinates[0] || beamCoordinates[0].length === 0){
+		context.clearRect(0, 0, canv.width, canv.height);
+		return;
+	}
+
+	// x and y coordinates always have the same number of points.
+	var points = beamCoordinates[0].length;
 
 	context.clearRect(0, 0, canv.width, canv.height);
 	
 	context.beginPath();
-	context.moveTo(Math.round(beamCoordinates[0][0])+0.5, Math.round(beamCoordinates[1][0])+0.5);
+	context.moveTo(toCrispPixel(beamCoordinates[0][0]), toCrispPixel(beamCoordinates[1][0]));
 	
-	var inRadius = (k1-w/2 < k-t) ? (k1-w/2)*SCALE : (k-t)*SCALE;
-	var outRadius = 0.3*t*SCALE;
+	var inRadiusFromK1 = isFinite(k1) ? (k1 - (w / 2)) : NaN;
+	var inRadiusFromK = k - flangeWebThickness;
+	var inRadius = inRadiusFromK;
+	var outRadius = 0.3 * flangeTipThickness * SCALE;
+
+	if (isFinite(inRadiusFromK1) && inRadiusFromK1 < inRadiusFromK){
+		inRadius = inRadiusFromK1;
+	}
+
+	inRadius = isFinite(inRadius) ? Math.max(0, inRadius * SCALE) : 0;
+	outRadius = isFinite(outRadius) ? Math.max(0, outRadius) : 0;
 
 	for (var i=1; i < points; i++){
-		if (i == 3 || i == 4 || i == 9 || i == 10){
+		if (INSIDE_ARC_SEGMENT_INDEX[i] === true){
 			// inside arc
-			context.arcTo(Math.round(beamCoordinates[0][i])+0.5,
-							Math.round(beamCoordinates[1][i])+0.5,
-							Math.round(beamCoordinates[0][i+1])+0.5,
-							Math.round(beamCoordinates[1][i+1])+0.5,
+			context.arcTo(toCrispPixel(beamCoordinates[0][i]),
+							toCrispPixel(beamCoordinates[1][i]),
+							toCrispPixel(beamCoordinates[0][i+1]),
+							toCrispPixel(beamCoordinates[1][i+1]),
 							inRadius);
-		} else if (i == 2 || i == 5 || i == 8 || i == 11) {
+		} else if (OUTSIDE_ARC_SEGMENT_INDEX[i] === true) {
 			// outside arc
-			context.arcTo(Math.round(beamCoordinates[0][i])+0.5,
-							Math.round(beamCoordinates[1][i])+0.5,
-							Math.round(beamCoordinates[0][i+1])+0.5,
-							Math.round(beamCoordinates[1][i+1])+0.5,
+			context.arcTo(toCrispPixel(beamCoordinates[0][i]),
+							toCrispPixel(beamCoordinates[1][i]),
+							toCrispPixel(beamCoordinates[0][i+1]),
+							toCrispPixel(beamCoordinates[1][i+1]),
 							outRadius);
 		} else {
 			// line
-			context.lineTo(Math.round(beamCoordinates[0][i])+0.5,
-							Math.round(beamCoordinates[1][i])+0.5);
+			context.lineTo(toCrispPixel(beamCoordinates[0][i]),
+							toCrispPixel(beamCoordinates[1][i]));
 		}
 	}
 	
@@ -130,66 +218,19 @@ function drawBeam(){
 
 
 function writePropAndTitle(){
+	// Build the displayed properties as [label + value + unit].
+	var values = getPropertyValues();
+	var units = getPropertyUnitsForSpec();
+	var x = canv.width / 2;
+	var y = TITLE_Y;
 	
-	var G,
-		data,
-		xCol1,
-		xCol2,
-		xCol3,
-		yRow1,
-		yRow2,
-		yRow3,
-		yRow4,
-		deadLoad,
-		x,
-		y;
+	writeOneText('700', '30', 'Roboto', 'center', '#2B2B2B', beamName, x, y);
+	y = SPEC_Y;
+	writeOneText('400', '10', 'Roboto', 'center', '#484848', currentSpecName, x, y);
 	
-	G = 9.80665; // gravity
-	xCol1 = 20;
-	xCol2 = 210;
-	xCol3 = 400;
-	yRow1 = 540;
-	yRow2 = yRow1 + 30;
-	yRow3 = yRow2 + 30;
-	yRow4 = yRow3 + 30;
-	
-	if (currentSpecName == CANADIAN_SPEC_NAME){	
-		deadLoad = Math.round(mass*G/1000 * 100)/100;
-		data = [['title',	'Dead Load: ',	'Area: ',	'Ix: ',      	'Sx: ',			'rx: ',		'Zx: ',			'Iy: ',			'Sy: ',			'ry: ',		'Zy: ',			'J: ',			'Cw: '],
-			[beamName,	deadLoad,		area,    	ix,          	sx,				rx,			zx,				iy,				sy,				ry,			zy,				j,				cw],
-			['',		'kN/m',			'mm^2',		'x10^6 mm^4',	'x10^3 mm^3',	'mm',		'x10^3 mm^3',	'x10^6 mm^4',	'x10^3 mm^3',	'mm',		'x10^3 mm^3',	'x10^3 mm^4',	'x10^9 mm^6'],
-			[0,			xCol1,			xCol1,		xCol2,			xCol2,			xCol2,		xCol2,			xCol3,			xCol3,			xCol3,		xCol3,			xCol1,			xCol1],
-			[0,			yRow1,			yRow2,		yRow1,			yRow2,			yRow3,		yRow4,			yRow1,			yRow2,			yRow3,		yRow4,			yRow3,			yRow4]];
-	}
-	
-	if (currentSpecName == AMERICAN_SPEC_NAME){
-		data = [['title',	'Dead Load: ',	'Area: ',	'Ix: ',      	'Sx: ',			'rx: ',		'Zx: ',			'Iy: ',			'Sy: ',			'ry: ',		'Zy: ',			'J: ',			'Cw: '],
-				[beamName,	mass,		area,    	ix,          	sx,				rx,			zx,				iy,				sy,				ry,			zy,				j,				cw],
-				['',		'lb/ft',		'in^2',		'in^4',			'in^3',			'in',		'in^3',			'in^4',			'in^3',			'in',		'in^3',			'in^4',			'in^6'],
-				[0,			xCol1,			xCol1,		xCol2,			xCol2,			xCol2,		xCol2,			xCol3,			xCol3,			xCol3,		xCol3,			xCol1,			xCol1],
-				[0,			yRow1,			yRow2,		yRow1,			yRow2,			yRow3,		yRow4,			yRow1,			yRow2,			yRow3,		yRow4,			yRow3,			yRow4]];
-	}
-	
-	if (currentSpecName == EUROPEAN_SPEC_NAME || currentSpecName == BRITISH_SPEC_NAME){
-		deadLoad = Math.round(mass*G/1000 * 100)/100;
-		data = [['title',	'Dead Load: ',	'Area: ',	'Ix: ',      	'Sx: ',			'rx: ',		'Zx: ',			'Iy: ',			'Sy: ',			'ry: ',		'Zy: ',			'J: ',			'Cw: '],
-				[beamName,	deadLoad,		area,    	ix,          	sx,				rx,			zx,				iy,				sy,				ry,			zy,				j,				cw],
-				['',		'kN/m',			'mm^2',		'x10^4 mm^4',	'x10^3 mm^3',	'x10 mm',	'x10^3 mm^3',	'x10^4 mm^4',	'x10^3 mm^3',	'x10 mm',	'x10^3 mm^3',	'x10^4 mm^4',	'x10^9 mm^6'],
-				[0,			xCol1,			xCol1,		xCol2,			xCol2,			xCol2,		xCol2,			xCol3,			xCol3,			xCol3,		xCol3,			xCol1,			xCol1],
-				[0,			yRow1,			yRow2,		yRow1,			yRow2,			yRow3,		yRow4,			yRow1,			yRow2,			yRow3,		yRow4,			yRow3,			yRow4]];
-	}
-		
-	// 'title'
-	x = canvas.width / 2;
-	y = 490;
-	writeOneText('700', '30', 'Roboto', 'center', '#2B2B2B',  beamName, x, y);
-	y = 505;
-	writeOneText('400', '10', 'Roboto', 'center', '#484848',  currentSpecName, x, y);
-	
-	// 'data' except 'title'
-	for (var i=1; i<data[0].length; i++){
-		var s = String(data[0][i]) + String(data[1][i]) + ' ' + String(data[2][i]);
-		writeOneText('400', '15', 'Roboto', 'left', '#2B2B2B',  s, data[3][i], data[4][i]);
+	for (var i=1; i<PROPERTY_LABELS.length; i++){
+		var propertyText = String(PROPERTY_LABELS[i]) + String(values[i]) + ' ' + String(units[i]);
+		writeOneText('400', '15', 'Roboto', 'left', '#2B2B2B', propertyText, PROPERTY_X_LAYOUT[i], PROPERTY_Y_LAYOUT[i]);
 	}
 	
 }
@@ -210,6 +251,13 @@ function drawDimensions(){
 	ty,
 	distT = Math.round((d - 2*k)*100)/100,
 	freeD = Math.round((d - 2*t)*100)/100;
+	var thicknessReferenceHalfWidth = flangeThicknessReferenceHalfWidth;
+	var rightSectionFaceX = X0 + b/2*SCALE;
+	var rightDimensionClearance = aOff + 20;
+	var rightDimensionX = rightSectionFaceX + rightDimensionClearance;
+	var rightDimensionTickX = rightDimensionX + lOff;
+	var rightDimensionTextX = rightDimensionTickX + 5;
+	var rightWitnessStartX = X0 + Math.max(thicknessReferenceHalfWidth, b/2)*SCALE + lOff;
 	
 	// 'b' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -224,8 +272,7 @@ function drawDimensions(){
 	drawOneLine(x2,y1,x2,y2);
 	tx = X0;
 	ty = Y0 + d*SCALE + aOff + 18;
-	var b_show = currentSpecName == AMERICAN_SPEC_NAME ? b_det : b;	
-	writeOneText('400', '15', 'Roboto', 'center', '#484848', b_show, tx, ty);
+	writeOneText('400', '15', 'Roboto', 'center', '#484848', b, tx, ty);
 	
 	// 'd' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -240,8 +287,7 @@ function drawDimensions(){
 	drawOneLine(x1,y2,x2,y2);
 	tx = X0 - b/2*SCALE - 2*aOff - 5;
 	ty = Y0 + d/2*SCALE + 15/2;
-	var d_show = currentSpecName == AMERICAN_SPEC_NAME ? d_det : d;	
-	writeOneText('400', '15', 'Roboto', 'right', '#484848', d_show, tx, ty);
+	writeOneText('400', '15', 'Roboto', 'right', '#484848', d, tx, ty);
 	
 	// 'T' distance arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -260,22 +306,21 @@ function drawDimensions(){
 	
 	// 't' dimension arrows. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = X0 + b/2*SCALE + aOff + 8;
+	x1 = rightDimensionX;
 	y1 = Y0 - aOff*0.9;
 	x2 = x1;
 	y2 = Y0;
 	drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
 	// The second arrow is drew by 'inside height' dimension
-	x1 = X0 + b/2*SCALE + lOff;
-	x2 = X0 + b/2*SCALE + aOff + lOff + 8;
+	x1 = rightWitnessStartX;
+	x2 = rightDimensionTickX;
 	y1 = Y0;
 	y2 = Y0 + t*SCALE;
 	drawOneLine(x1,y1,x2,y1);
 	drawOneLine(x1,y2,x2,y2);
-	tx = X0 + b/2*SCALE + aOff + lOff + 13;
+	tx = rightDimensionTextX;
 	ty = Y0 + t/2*SCALE + 14/2;
-	var t_show = currentSpecName == AMERICAN_SPEC_NAME ? t_det : t;	
-	writeOneText('400', '15', 'Roboto', 'left', '#484848', t_show, tx, ty);
+	writeOneText('400', '15', 'Roboto', 'left', '#484848', t, tx, ty);
 	
 	// 'w' dimension arrows. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -289,8 +334,7 @@ function drawDimensions(){
 	drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
 	tx = X0 + w/2*SCALE + aOff*0.9 + 3;
 	ty = y1 + 14/2;
-	var w_show = currentSpecName == AMERICAN_SPEC_NAME ? w_det : w;	
-	writeOneText('400', '15', 'Roboto', 'left', '#484848', w_show, tx, ty);
+	writeOneText('400', '15', 'Roboto', 'left', '#484848', w, tx, ty);
 		
 	// 'k' dimension arrows. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -301,20 +345,19 @@ function drawDimensions(){
 	drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
 	tx = X0 - b/2*SCALE - aOff;
 	ty = y1 + 17;
-	var k_show = currentSpecName == AMERICAN_SPEC_NAME ? k_det : k;	
-	writeOneText('400', '15', 'Roboto', 'right', '#484848', k_show, tx, ty);
+	writeOneText('400', '15', 'Roboto', 'right', '#484848', k, tx, ty);
 	
 	// 'inside height' : variable 'freeD' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = X0 + b/2*SCALE + aOff + 8;
+	x1 = rightDimensionX;
 	y1 = Y0 + t*SCALE;
 	x2 = x1;
 	y2 = Y0 + (d-t)*SCALE;
 	drawArrow (context,x1,y1,x2,y2,style,which,angle,dist);
-	x1 = X0 + b/2*SCALE + lOff;
-	x2 = X0 + b/2*SCALE + aOff + lOff + 8;
+	x1 = rightWitnessStartX;
+	x2 = rightDimensionTickX;
 	drawOneLine(x1,y2,x2,y2);
-	tx = X0 + b/2*SCALE + aOff + lOff + 13;
+	tx = rightDimensionTextX;
 	ty = Y0 + d/2*SCALE + 14/2;
 	writeOneText('400', '15', 'Roboto', 'left', '#484848', freeD, tx, ty);
 	
@@ -322,10 +365,10 @@ function drawDimensions(){
 
 
 function drawOneLine(x1,y1,x2,y2){
-	x1 = Math.round(x1)+0.5;
-	y1 = Math.round(y1)+0.5;
-	x2 = Math.round(x2)+0.5;
-	y2 = Math.round(y2)+0.5;
+	x1 = toCrispPixel(x1);
+	y1 = toCrispPixel(y1);
+	x2 = toCrispPixel(x2);
+	y2 = toCrispPixel(y2);
 	
 	context.beginPath();
 	context.moveTo(x1,y1);
@@ -345,98 +388,210 @@ function writeOneText(weight, size, font, align, color, text, x, y){
 }
 
 
-function setCoordDimsAndScale(){
-	// It sets:
-	// The scaled coordinates to array variable
-	// The unscaled dimensions to various variables
-	// The apropriate scale
-	
-	for (var i=0; i < currentShapes.row.length; i++){
-		
-		if (currentShapes.row[i].name === beamName){
-			
-			beamCoordinates=[];
-			xArray = [];
-			yArray = [];
-			
-			b = parseFloat(currentShapes.row[i].b);
-			d = parseFloat(currentShapes.row[i].d);
-			t = parseFloat(currentShapes.row[i].t);
-			w = parseFloat(currentShapes.row[i].w);
-			k = parseFloat(currentShapes.row[i].k);
-			k1 = parseFloat(currentShapes.row[i].k1);
-			
-			if (currentSpecName == AMERICAN_SPEC_NAME){
-				b_det = String(currentShapes.row[i].b_det);
-				d_det = String(currentShapes.row[i].d_det);
-				t_det = String(currentShapes.row[i].t_det);
-				w_det = String(currentShapes.row[i].w_det);
-				k_det = String(currentShapes.row[i].k_det);
-				k1_det = String(currentShapes.row[i].k1_det);
-			}			
-			
-			mass = parseFloat(currentShapes.row[i].mass);
-			area = parseFloat(currentShapes.row[i].a);
-			ix = parseFloat(currentShapes.row[i].ix);
-			sx = parseFloat(currentShapes.row[i].sx);
-			rx = parseFloat(currentShapes.row[i].rx);
-			zx = parseFloat(currentShapes.row[i].zx);
-			iy = parseFloat(currentShapes.row[i].iy);
-			sy = parseFloat(currentShapes.row[i].sy);
-			ry = parseFloat(currentShapes.row[i].ry);
-			zy = parseFloat(currentShapes.row[i].zy);
-			j = parseFloat(currentShapes.row[i].j);
-			cw = parseFloat(currentShapes.row[i].cw);
-			
-			
-			// setting the scale
-			if (zoom === true){
-				SCALE = AVAILABLE_BEAM_HEIGHT_PIXELS / d;
-			} else {
-				SCALE = standardScale;
-			}
-			
-			// With parseInt and having a line width of 2px I don't get the blurred line as explained in the link on top of this file
-			xArray.push(parseInt(X0));				// 0
-			xArray.push(parseInt(X0+SCALE*(b/2)));	// 1
-			xArray.push(parseInt(X0+SCALE*(b/2)));	// 2
-			xArray.push(parseInt(X0+SCALE*(w/2)));	// 3
-			xArray.push(parseInt(X0+SCALE*(w/2)));	// 4
-			xArray.push(parseInt(X0+SCALE*(b/2)));	// 5
-			xArray.push(parseInt(X0+SCALE*(b/2)));	// 6
-			xArray.push(parseInt(X0-SCALE*(b/2)));	// 7
-			xArray.push(parseInt(X0-SCALE*(b/2)));	// 8
-			xArray.push(parseInt(X0-SCALE*(w/2)));	// 9
-			xArray.push(parseInt(X0-SCALE*(w/2)));	// 10
-			xArray.push(parseInt(X0-SCALE*(b/2)));	// 11
-			xArray.push(parseInt(X0-SCALE*(b/2)));	// 12
-			xArray.push(parseInt(X0));				// 13
-			
-			yArray.push(parseInt(Y0));				// 0
-			yArray.push(parseInt(Y0));				// 1
-			yArray.push(parseInt(Y0+SCALE*(t)));	// 2
-			yArray.push(parseInt(Y0+SCALE*(t)));	// 3
-			yArray.push(parseInt(Y0+SCALE*(d-t)));	// 4
-			yArray.push(parseInt(Y0+SCALE*(d-t)));	// 5
-			yArray.push(parseInt(Y0+SCALE*(d)));	// 6
-			yArray.push(parseInt(Y0+SCALE*(d)));	// 7
-			yArray.push(parseInt(Y0+SCALE*(d-t)));	// 8
-			yArray.push(parseInt(Y0+SCALE*(d-t)));	// 9
-			yArray.push(parseInt(Y0+SCALE*(t)));	// 10
-			yArray.push(parseInt(Y0+SCALE*(t)));	// 11
-			yArray.push(parseInt(Y0));				// 12
-			yArray.push(parseInt(Y0));				// 13
-
-			beamCoordinates.push(xArray);
-			beamCoordinates.push(yArray);
-
-			break;
-
-		} else {
+function findBeamRowByName(rows, name){
+	for (var i=0; i<rows.length; i++){
+		if (rows[i].name === name){
+			return rows[i];
 		}
-		
+	}
+	return null;
+}
+
+
+function setDimensionValues(shapeRow){
+	b = parseFloat(shapeRow.b);
+	d = parseFloat(shapeRow.d);
+	t = parseFloat(shapeRow.t);
+	w = parseFloat(shapeRow.w);
+	k = parseFloat(shapeRow.k);
+	k1 = parseFloat(shapeRow.k1);
+	sectionType = getRowSectionType(shapeRow);
+	flangeTipThickness = getFlangeTipThickness(sectionType, b, w, t);
+	flangeWebThickness = getFlangeWebThickness(sectionType, b, w, t, k);
+	flangeThicknessReferenceHalfWidth = getFlangeThicknessReferenceHalfWidth(sectionType, b, w);
+}
+
+
+function isSlopedFlangeSectionType(type){
+	return type === 'S';
+}
+
+
+function getFlangeTipThickness(type, flangeWidth, webThickness, flangeThickness){
+	var halfFlangeRun;
+	var computedTipThickness;
+
+	if (!isFinite(flangeThickness)){
+		return 0;
 	}
 
+	if (isSlopedFlangeSectionType(type) !== true){
+		return Math.max(0, flangeThickness);
+	}
+
+	// For S-shapes, tf is measured midway between web face and flange tip.
+	halfFlangeRun = (flangeWidth - webThickness) / 4;
+	computedTipThickness = flangeThickness - (halfFlangeRun * S_FLANGE_INNER_FACE_SLOPE);
+
+	if (!isFinite(computedTipThickness)){
+		return Math.max(0, flangeThickness);
+	}
+
+	return Math.max(0, computedTipThickness);
+}
+
+
+function getFlangeWebThickness(type, flangeWidth, webThickness, flangeThickness, kDimension){
+	var halfFlangeRun;
+	var computedWebThickness;
+
+	if (isSlopedFlangeSectionType(type) !== true){
+		return flangeThickness;
+	}
+
+	// AISC S-shapes have a tapered inner flange face with 2:12 slope.
+	halfFlangeRun = (flangeWidth - webThickness) / 4;
+	computedWebThickness = flangeThickness + (halfFlangeRun * S_FLANGE_INNER_FACE_SLOPE);
+
+	if (!isFinite(computedWebThickness)){
+		return flangeThickness;
+	}
+
+	if (isFinite(kDimension)){
+		computedWebThickness = Math.min(computedWebThickness, kDimension);
+	}
+
+	return Math.max(flangeThickness, computedWebThickness);
+}
+
+
+function getFlangeThicknessReferenceHalfWidth(type, flangeWidth, webThickness){
+	if (!isFinite(flangeWidth)){
+		return 0;
+	}
+
+	if (isSlopedFlangeSectionType(type) !== true || !isFinite(webThickness)){
+		return flangeWidth / 2;
+	}
+
+	// For sloped S flanges, tf is defined at the midpoint between web face and flange tip.
+	return (flangeWidth + webThickness) / 4;
+}
+
+
+function setPropertyValues(shapeRow){
+	mass = parseFloat(shapeRow.mass);
+	area = parseFloat(shapeRow.a);
+	ix = parseFloat(shapeRow.ix);
+	sx = parseFloat(shapeRow.sx);
+	rx = parseFloat(shapeRow.rx);
+	zx = parseFloat(shapeRow.zx);
+	iy = parseFloat(shapeRow.iy);
+	sy = parseFloat(shapeRow.sy);
+	ry = parseFloat(shapeRow.ry);
+	zy = parseFloat(shapeRow.zy);
+	j = parseFloat(shapeRow.j);
+	cw = parseFloat(shapeRow.cw);
+}
+
+
+function getCurrentScale(){
+	if (zoom === true){
+		return AVAILABLE_BEAM_HEIGHT_PIXELS / d;
+	}
+	return standardScale;
+}
+
+
+function buildBeamCoordinates(){
+	var halfB = b / 2;
+	var halfW = w / 2;
+	var insideTopAtTip = flangeTipThickness;
+	var insideTopAtWeb = flangeWebThickness;
+	var insideBottomAtWeb = d - flangeWebThickness;
+	var insideBottomAtTip = d - flangeTipThickness;
+	var xOffsets = [0, halfB, halfB, halfW, halfW, halfB, halfB, -halfB, -halfB, -halfW, -halfW, -halfB, -halfB, 0];
+	var yOffsets = [0, 0, insideTopAtTip, insideTopAtWeb, insideBottomAtWeb, insideBottomAtTip, d, d, insideBottomAtTip, insideBottomAtWeb, insideTopAtWeb, insideTopAtTip, 0, 0];
+	var xCoords = [];
+	var yCoords = [];
+
+	// Coordinates are intentionally integer-truncated. The 0.5 offset is applied during draw calls.
+	for (var i=0; i<xOffsets.length; i++){
+		xCoords.push(toInt(X0 + SCALE * xOffsets[i]));
+		yCoords.push(toInt(Y0 + SCALE * yOffsets[i]));
+	}
+
+	return [xCoords, yCoords];
+}
+
+
+function setCoordDimsAndScale(){
+	// Sets:
+	// 1) unscaled beam dimensions/properties
+	// 2) active drawing scale
+	// 3) scaled beam coordinates
+	if (!currentShapes || !currentShapes.row){
+		beamCoordinates = [];
+		return;
+	}
+
+	var shapeRow = findBeamRowByName(currentShapes.row, beamName);
+
+	if (!shapeRow){
+		beamCoordinates = [];
+		return;
+	}
+
+	setDimensionValues(shapeRow);
+	setPropertyValues(shapeRow);
+
+	SCALE = getCurrentScale();
+	beamCoordinates = buildBeamCoordinates();
+	xArray = beamCoordinates[0];
+	yArray = beamCoordinates[1];
+
+}
+
+
+function moveSelectionBy(step, listContainerElement, scrollStep){
+	var row = toInt($('.sel').attr('row'));
+
+	if (isNaN(row)){
+		return;
+	}
+
+	row += step;
+	$("div[row='" + row + "']").trigger('mouseover');
+
+	listContainerElement.scrollTop(listContainerElement.scrollTop() + (step * scrollStep));
+}
+
+
+function getShapeSetConfig(shapeSetKey){
+	var shapeSets = {
+		canadianShapes: {dataset: canadianShapes, specName: CANADIAN_SPEC_NAME, scale: STD_CANADIAN_SCALE},
+		americanShapes: {dataset: americanShapes, specName: AMERICAN_SPEC_NAME, scale: STD_AMERICAN_SCALE},
+		europeanShapes: {dataset: europeanShapes, specName: EUROPEAN_SPEC_NAME, scale: STD_EUROPEAN_SCALE},
+		britishShapes: {dataset: britishShapes, specName: BRITISH_SPEC_NAME, scale: STD_BRITISH_SCALE}
+	};
+
+	return shapeSets[shapeSetKey];
+}
+
+
+function setCurrentShapeSet(shapeSetKey){
+	var selectedShapeSet = getShapeSetConfig(shapeSetKey);
+
+	if (!selectedShapeSet){
+		return false;
+	}
+
+	currentShapes = selectedShapeSet.dataset;
+	currentSpecName = selectedShapeSet.specName;
+	standardScale = selectedShapeSet.scale;
+	currentShapeSetKey = shapeSetKey;
+
+	return true;
 }
 
 
@@ -447,22 +602,16 @@ function setMostListeners(){
 	});
 
 	$(document).keydown(function(e) {
-		var ele = $('#list-container');
-		var scroll = 29; // Which is height + padding-top
+		var listContainer = $('#list-container');
+		var scrollStep = 29; // height + top padding of one list row
 		
 		switch(e.which) {
 			case 38: // up
-				var row = parseInt($('.sel').attr('row'));
-				row--;
-				$("div[row='" + row + "']").trigger('mouseover');							
-				ele.scrollTop(ele.scrollTop() - scroll);
+				moveSelectionBy(-1, listContainer, scrollStep);
 			break;
 
 			case 40: // down
-				var row = parseInt($('.sel').attr('row'));
-				row++;
-				$("div[row='" + row + "']").trigger('mouseover');
-				ele.scrollTop(ele.scrollTop() + scroll);
+				moveSelectionBy(1, listContainer, scrollStep);
 			break;
 
 			default: return; // exit this handler for other keys
@@ -472,26 +621,16 @@ function setMostListeners(){
 	
 	
 	$('#show-dimensions').click(function () {
-		if ($('#show-dimensions').hasClass('on') === true){
-			showDimensions = false;
-			$('#show-dimensions').removeClass('on');
-		} else {
-			showDimensions = true;
-			$('#show-dimensions').addClass('on');
-		}
+		showDimensions = !$('#show-dimensions').hasClass('on');
+		$('#show-dimensions').toggleClass('on', showDimensions);
 		
 		drawCanvas();
 	});
 	
 	
 	$('#zoom').click(function () {
-		if ($('#zoom').hasClass('on') === true){
-			zoom = false;
-			$('#zoom').removeClass('on');
-		} else {
-			zoom = true;
-			$('#zoom').addClass('on');
-		}
+		zoom = !$('#zoom').hasClass('on');
+		$('#zoom').toggleClass('on', zoom);
 		
 		drawCanvas();
 	});
@@ -508,39 +647,25 @@ function setMostListeners(){
 			listScrollTopByShapeSet[currentShapeSetKey] = listContainer.scrollTop;
 		}
 		
-		switch(shapeSelection){
-			case 'canadianShapes':
-				currentShapes = canadianShapes;
-				currentSpecName = CANADIAN_SPEC_NAME;
-				standardScale = STD_CANADIAN_SCALE
-			break;
-			
-			case 'americanShapes':
-				currentShapes = americanShapes;
-				currentSpecName = AMERICAN_SPEC_NAME;
-				standardScale = STD_AMERICAN_SCALE
-			break;
-			
-			case 'europeanShapes':
-				currentShapes = europeanShapes;
-				currentSpecName = EUROPEAN_SPEC_NAME;
-				standardScale = STD_EUROPEAN_SCALE;
-			break;
-			
-			case 'britishShapes':
-				currentShapes = britishShapes;
-				currentSpecName = BRITISH_SPEC_NAME;
-				standardScale = STD_BRITISH_SCALE;
-			break;
-			
-			default:
+		if (setCurrentShapeSet(shapeSelection) === false){
 			alert('Oops! This is an unexpected error. Please contact the developer ;)');
+			return;
 		}
-		currentShapeSetKey = shapeSelection;
 		
 		$('.shapes').removeClass('on');
 		$(this).addClass('on');
 		
+		showList();
+	});
+
+	$('#section-filter-container').on('click', '.section-type', function(){
+		var sectionType = $(this).attr('data-section-type');
+
+		if (!sectionType || !currentShapeSetKey){
+			return;
+		}
+
+		selectedSectionTypeByShapeSet[currentShapeSetKey] = sectionType;
 		showList();
 	});
 
@@ -559,15 +684,19 @@ function selectBeam(beamId, element){
 
 
 function setMouseHoverListener(){
-	
-	$(".w").mouseover(function(){
+	var listContainer = $('#list-container');
+
+	// Rebind with a namespace so repeated showList() calls keep a single handler set.
+	listContainer.off('mouseover.steel click.steel', '.w');
+
+	listContainer.on('mouseover.steel', '.w', function(){
 		selectBeam($(this).attr('id'), this);
 	});
-	
-	$(".w").click(function(){
+
+	listContainer.on('click.steel', '.w', function(){
 		selectBeam($(this).attr('id'), this);
 	});
-	
+
 }
 
 
@@ -578,8 +707,133 @@ function drawCanvas(){
 }
 
 
+function isSectionTypeFilterEnabledForShapeSet(shapeSetKey){
+	return shapeSetKey === 'americanShapes' || shapeSetKey === 'canadianShapes';
+}
+
+
+function getRowSectionType(row){
+	if (!row){
+		return '';
+	}
+
+	if (row.type){
+		return String(row.type).toUpperCase();
+	}
+
+	if (!row.name){
+		return '';
+	}
+
+	var normalizedName = String(row.name).toUpperCase();
+	var knownTypes = ['HSS', 'PIPE', '2L', 'WT', 'MT', 'ST', 'HP', 'MC', 'W', 'M', 'S', 'C', 'L'];
+
+	for (var i = 0; i < knownTypes.length; i++){
+		if (normalizedName.indexOf(knownTypes[i]) === 0){
+			return knownTypes[i];
+		}
+	}
+
+	return '';
+}
+
+
+function getAvailableSectionTypes(rows){
+	var types = [];
+	var seen = {};
+
+	for (var i = 0; i < rows.length; i++){
+		var type = getRowSectionType(rows[i]);
+		if (!type || seen[type]){
+			continue;
+		}
+		seen[type] = true;
+		types.push(type);
+	}
+
+	return types;
+}
+
+
+function getActiveSectionType(rows){
+	var availableTypes = getAvailableSectionTypes(rows);
+	var savedType;
+
+	if (availableTypes.length === 0){
+		return '';
+	}
+
+	savedType = selectedSectionTypeByShapeSet[currentShapeSetKey];
+	if (savedType && availableTypes.indexOf(savedType) >= 0){
+		return savedType;
+	}
+
+	if (availableTypes.indexOf('W') >= 0){
+		selectedSectionTypeByShapeSet[currentShapeSetKey] = 'W';
+		return 'W';
+	}
+
+	selectedSectionTypeByShapeSet[currentShapeSetKey] = availableTypes[0];
+	return availableTypes[0];
+}
+
+
+function renderSectionTypeFilter(rows){
+	var container = $('#section-filter-container');
+	var availableTypes;
+	var activeType;
+	var html = [];
+
+	if (container.length === 0){
+		return;
+	}
+
+	if (!isSectionTypeFilterEnabledForShapeSet(currentShapeSetKey)){
+		container.hide().html('');
+		return;
+	}
+
+	availableTypes = getAvailableSectionTypes(rows);
+	if (availableTypes.length === 0){
+		container.hide().html('');
+		return;
+	}
+
+	activeType = getActiveSectionType(rows);
+
+	html.push("<div class='section-filter-title'>Section Type</div>");
+	for (var i = 0; i < availableTypes.length; i++){
+		var type = availableTypes[i];
+		var onClass = (type === activeType) ? ' on' : '';
+		html.push("<div class='button section-type" + onClass + "' data-section-type='" + type + "'>" + type + "</div>");
+	}
+
+	container.html(html.join('')).show();
+}
+
+
+function getVisibleRowsForCurrentShapeSet(rows){
+	var activeType;
+
+	if (!isSectionTypeFilterEnabledForShapeSet(currentShapeSetKey)){
+		return rows;
+	}
+
+	activeType = getActiveSectionType(rows);
+	if (!activeType){
+		return rows;
+	}
+
+	return rows.filter(function (row) {
+		return getRowSectionType(row) === activeType;
+	});
+}
+
+
 function showList(){
-	var items = $();
+	var rows;
+	var visibleRows;
+	var itemsHtml = [];
 	var restoredBeamName;
 	var restoredBeamElement;
 	var defaultBeamName;
@@ -587,22 +841,32 @@ function showList(){
 	var restoredScrollTop;
 	var listContainer = document.getElementById('list-container');
 	
-	// deleting previuos list, if any
+	if (!listContainer || !currentShapes || !currentShapes.row){
+		return;
+	}
+
+	rows = currentShapes.row;
+	renderSectionTypeFilter(rows);
+	visibleRows = getVisibleRowsForCurrentShapeSet(rows);
+
+	// Remove previous list and rebuild it for the current shape set.
 	$('#list-container').html('');
 	
-	for (var i = 0; i < currentShapes.row.length; i++) {
-		items = items.add( "<div id='" + currentShapes.row[i].name + "' class='w' row='" + (i+1) + "'>" + currentShapes.row[i].name + "</div>" );
+	for (var i = 0; i < visibleRows.length; i++) {
+		itemsHtml.push("<div id='" + visibleRows[i].name + "' class='w' row='" + (i+1) + "'>" + visibleRows[i].name + "</div>");
 	}
 	
-	$('#list-container').append( items );
+	$('#list-container').append(itemsHtml.join(''));
 	
 	setMouseHoverListener();
 	
+	// Restore scrolling position for this shape set if available.
 	restoredScrollTop = listScrollTopByShapeSet[currentShapeSetKey];
-	if (listContainer && restoredScrollTop !== undefined) {
+	if (restoredScrollTop !== undefined) {
 		listContainer.scrollTop = restoredScrollTop;
 	}
 	
+	// Restore previously selected beam for this shape set.
 	restoredBeamName = selectedBeamByShapeSet[currentShapeSetKey];
 	if (restoredBeamName) {
 		restoredBeamElement = document.getElementById(restoredBeamName);
@@ -611,33 +875,34 @@ function showList(){
 	if (restoredBeamElement) {
 		selectBeam(restoredBeamName, restoredBeamElement);
 		restoredBeamElement.scrollIntoView({block: 'nearest'});
+		return;
+	}
+
+	// If nothing is restored, select the last item by default.
+	if (visibleRows.length === 0){
+		context.clearRect(0, 0, canv.width, canv.height);
+		return;
+	}
+
+	defaultBeamName = visibleRows[visibleRows.length - 1].name;
+	defaultBeamElement = document.getElementById(defaultBeamName);
+
+	if (defaultBeamElement) {
+		listContainer.scrollTop = listContainer.scrollHeight;
+		listScrollTopByShapeSet[currentShapeSetKey] = listContainer.scrollTop;
+		selectBeam(defaultBeamName, defaultBeamElement);
+		defaultBeamElement.scrollIntoView({block: 'end'});
 	} else {
-		defaultBeamName = currentShapes.row[currentShapes.row.length - 1].name;
-		defaultBeamElement = document.getElementById(defaultBeamName);
-		if (defaultBeamElement) {
-			if (listContainer) {
-				listContainer.scrollTop = listContainer.scrollHeight;
-				listScrollTopByShapeSet[currentShapeSetKey] = listContainer.scrollTop;
-			}
-			selectBeam(defaultBeamName, defaultBeamElement);
-			defaultBeamElement.scrollIntoView({block: 'end'});
-		} else {
-			context.clearRect(0, 0, canv.width, canv.height);
-		}
+		context.clearRect(0, 0, canv.width, canv.height);
 	}
 }
 
 
 function isIE(){
-	
 	var ua = window.navigator.userAgent;
-	var msie = ua.indexOf("MSIE");
-	
-	if (navigator.appName == 'Microsoft Internet Explorer' || msie > 0){
-		return true;
-	} else {
-		return false;
-	}	
+	var hasMsieToken = ua.indexOf("MSIE") > 0;
+
+	return navigator.appName === 'Microsoft Internet Explorer' || hasMsieToken;
 }
 
 
