@@ -29,7 +29,7 @@ var currentShapes, canadianShapes, americanShapes, europeanShapes, britishShapes
 	currentShapeSetKey, selectedBeamByShapeSet, listScrollTopByShapeSet, selectedSectionTypeByShapeSet;
 
 // Current section dimensions.
-var b, d, t, w, k, k1, sectionType, flangeTipThickness, flangeWebThickness, flangeThicknessReferenceHalfWidth;
+var b, d, t, w, k, k1, sectionType, flangeTipThickness, flangeWebThickness, flangeThicknessReferenceXOffset;
 
 // Current section properties.
 var mass, area,	ix,	sx,	rx,	zx,	iy,	sy,	ry,	zy, j, cw;
@@ -56,6 +56,10 @@ var PROPERTY_Y_LAYOUT = [0, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_ST
 
 var INSIDE_ARC_SEGMENT_INDEX = {3: true, 4: true, 9: true, 10: true};
 var OUTSIDE_ARC_SEGMENT_INDEX = {2: true, 5: true, 8: true, 11: true};
+var CHANNEL_INSIDE_ARC_SEGMENT_INDEX = {3: true, 4: true};
+var CHANNEL_OUTSIDE_ARC_SEGMENT_INDEX = {2: true, 5: true};
+var activeInsideArcSegmentIndex = INSIDE_ARC_SEGMENT_INDEX;
+var activeOutsideArcSegmentIndex = OUTSIDE_ARC_SEGMENT_INDEX;
 var S_FLANGE_INNER_FACE_SLOPE = 2 / 12;
 
 
@@ -187,14 +191,14 @@ function drawBeam(){
 	outRadius = isFinite(outRadius) ? Math.max(0, outRadius) : 0;
 
 	for (var i=1; i < points; i++){
-		if (INSIDE_ARC_SEGMENT_INDEX[i] === true){
+		if (activeInsideArcSegmentIndex[i] === true){
 			// inside arc
 			context.arcTo(toCrispPixel(beamCoordinates[0][i]),
 							toCrispPixel(beamCoordinates[1][i]),
 							toCrispPixel(beamCoordinates[0][i+1]),
 							toCrispPixel(beamCoordinates[1][i+1]),
 							inRadius);
-		} else if (OUTSIDE_ARC_SEGMENT_INDEX[i] === true) {
+		} else if (activeOutsideArcSegmentIndex[i] === true) {
 			// outside arc
 			context.arcTo(toCrispPixel(beamCoordinates[0][i]),
 							toCrispPixel(beamCoordinates[1][i]),
@@ -251,19 +255,30 @@ function drawDimensions(){
 	ty,
 	distT = Math.round((d - 2*k)*100)/100,
 	freeD = Math.round((d - 2*t)*100)/100;
-	var thicknessReferenceHalfWidth = flangeThicknessReferenceHalfWidth;
-	var rightSectionFaceX = X0 + b/2*SCALE;
+	var sectionLeftOffset = getSectionLeftOffset(sectionType, b);
+	var sectionRightOffset = getSectionRightOffset(sectionType, b);
+	var webLeftOffset = getWebLeftOffset(sectionType, b, w);
+	var webRightOffset = getWebRightOffset(sectionType, b, w);
+	var webToeOffset = getWebToeOffset(sectionType, b, w);
+	var leftDepthDimensionExtraOffset = 8;
+	var leftDepthDimensionX = X0 + sectionLeftOffset*SCALE - 2*aOff - leftDepthDimensionExtraOffset;
+	var leftInnerDimensionExtraOffset = 20;
+	var leftInnerDimensionX = X0 + sectionLeftOffset*SCALE - aOff - leftInnerDimensionExtraOffset;
+	var thicknessReferenceXOffset = flangeThicknessReferenceXOffset;
+	var rightSectionFaceX = X0 + sectionRightOffset*SCALE;
 	var rightDimensionClearance = aOff + 20;
+	var rightWitnessObjectGap = 8;
 	var rightDimensionX = rightSectionFaceX + rightDimensionClearance;
 	var rightDimensionTickX = rightDimensionX + lOff;
 	var rightDimensionTextX = rightDimensionTickX + 5;
-	var rightWitnessStartX = X0 + Math.max(thicknessReferenceHalfWidth, b/2)*SCALE + lOff;
+	var thicknessReferenceX = X0 + thicknessReferenceXOffset*SCALE;
+	var rightWitnessStartX = Math.max(thicknessReferenceX, rightSectionFaceX + rightWitnessObjectGap);
 	
 	// 'b' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = X0 - b/2*SCALE;
+	x1 = X0 + sectionLeftOffset*SCALE;
 	y1 = Y0 + d*SCALE + aOff;
-	x2 = X0 + b/2*SCALE;
+	x2 = X0 + sectionRightOffset*SCALE;
 	y2 = y1;
 	drawArrow (context,x1,y1,x2,y2,style,which,angle,dist);
 	y1 = Y0 + d*SCALE + lOff;
@@ -276,31 +291,31 @@ function drawDimensions(){
 	
 	// 'd' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = X0 - b/2*SCALE - 2*aOff;
+	x1 = leftDepthDimensionX;
 	y1 = Y0;
 	x2 = x1;
 	y2 = Y0 + d*SCALE;
 	drawArrow (context,x1,y1,x2,y2,style,which,angle,dist);
-	x1 = X0 - b/2*SCALE - lOff;
-	x2 = X0 - b/2*SCALE - 2*aOff - lOff;
+	x1 = X0 + sectionLeftOffset*SCALE - lOff;
+	x2 = leftDepthDimensionX - lOff;
 	drawOneLine(x1,y1,x2,y1);
 	drawOneLine(x1,y2,x2,y2);
-	tx = X0 - b/2*SCALE - 2*aOff - 5;
+	tx = leftDepthDimensionX - 5;
 	ty = Y0 + d/2*SCALE + 15/2;
 	writeOneText('400', '15', 'Roboto', 'right', '#484848', d, tx, ty);
 	
 	// 'T' distance arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = X0 - b/2*SCALE - aOff;
+	x1 = leftInnerDimensionX;
 	y1 = Y0 + k*SCALE;
 	x2 = x1;
 	y2 = Y0 + (d-k)*SCALE;
 	drawArrow (context,x1,y1,x2,y2,style,which,angle,dist);
-	x1 = X0 - w/2*SCALE - lOff;
-	x2 = X0 - b/2*SCALE - aOff - lOff;
+	x1 = X0 + webToeOffset*SCALE - lOff;
+	x2 = leftInnerDimensionX - lOff;
 	drawOneLine(x1,y1,x2,y1);
 	drawOneLine(x1,y2,x2,y2);
-	tx = X0 - b/2*SCALE - aOff + 5;
+	tx = leftInnerDimensionX + 5;
 	ty = Y0 + d/2*SCALE + 15/2;
 	writeOneText('400', '15', 'Roboto', 'left', '#484848', distT, tx, ty);
 	
@@ -324,26 +339,26 @@ function drawDimensions(){
 	
 	// 'w' dimension arrows. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = X0 - w/2*SCALE - aOff*0.9;
+	x1 = X0 + webLeftOffset*SCALE - aOff*0.9;
 	y1 = Y0 + (t + distT*0.30)*SCALE;
-	x2 = X0 - w/2*SCALE;
+	x2 = X0 + webLeftOffset*SCALE;
 	y2 = y1;
 	drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
-	x1 = X0 + w/2*SCALE + aOff*0.9;
-	x2 = X0 + w/2*SCALE;
+	x1 = X0 + webRightOffset*SCALE + aOff*0.9;
+	x2 = X0 + webRightOffset*SCALE;
 	drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
-	tx = X0 + w/2*SCALE + aOff*0.9 + 3;
+	tx = X0 + webRightOffset*SCALE + aOff*0.9 + 3;
 	ty = y1 + 14/2;
 	writeOneText('400', '15', 'Roboto', 'left', '#484848', w, tx, ty);
 		
 	// 'k' dimension arrows. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = X0 - b/2*SCALE - aOff;
+	x1 = leftInnerDimensionX;
 	y1 = Y0 + d*SCALE + aOff*0.9;
 	x2 = x1;
 	y2 = Y0 + d*SCALE;
 	drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
-	tx = X0 - b/2*SCALE - aOff;
+	tx = leftInnerDimensionX;
 	ty = y1 + 17;
 	writeOneText('400', '15', 'Roboto', 'right', '#484848', k, tx, ty);
 	
@@ -408,17 +423,74 @@ function setDimensionValues(shapeRow){
 	sectionType = getRowSectionType(shapeRow);
 	flangeTipThickness = getFlangeTipThickness(sectionType, b, w, t);
 	flangeWebThickness = getFlangeWebThickness(sectionType, b, w, t, k);
-	flangeThicknessReferenceHalfWidth = getFlangeThicknessReferenceHalfWidth(sectionType, b, w);
+	flangeThicknessReferenceXOffset = getFlangeThicknessReferenceXOffset(sectionType, b, w);
 }
 
 
 function isSlopedFlangeSectionType(type){
-	return type === 'S';
+	return type === 'S' || type === 'C' || type === 'MC' || type === 'M';
+}
+
+
+function isChannelSectionType(type){
+	return type === 'C' || type === 'MC';
+}
+
+
+function getSectionLeftOffset(type, flangeWidth){
+	return -flangeWidth / 2;
+}
+
+
+function getSectionRightOffset(type, flangeWidth){
+	return flangeWidth / 2;
+}
+
+
+function getWebLeftOffset(type, flangeWidth, webThickness){
+	if (isChannelSectionType(type) === true){
+		return -flangeWidth / 2;
+	}
+	return -webThickness / 2;
+}
+
+
+function getWebRightOffset(type, flangeWidth, webThickness){
+	if (isChannelSectionType(type) === true){
+		return (-flangeWidth / 2) + webThickness;
+	}
+	return webThickness / 2;
+}
+
+
+function getWebToeOffset(type, flangeWidth, webThickness){
+	if (isChannelSectionType(type) === true){
+		return getWebRightOffset(type, flangeWidth, webThickness);
+	}
+	return getWebLeftOffset(type, flangeWidth, webThickness);
+}
+
+
+function getFlangeProjection(type, flangeWidth, webThickness){
+	if (!isFinite(flangeWidth) || !isFinite(webThickness)){
+		return 0;
+	}
+
+	if (isChannelSectionType(type) === true){
+		return flangeWidth - webThickness;
+	}
+
+	return (flangeWidth - webThickness) / 2;
+}
+
+
+function getFlangeReferenceHalfRun(type, flangeWidth, webThickness){
+	return getFlangeProjection(type, flangeWidth, webThickness) / 2;
 }
 
 
 function getFlangeTipThickness(type, flangeWidth, webThickness, flangeThickness){
-	var halfFlangeRun;
+	var referenceHalfRun;
 	var computedTipThickness;
 
 	if (!isFinite(flangeThickness)){
@@ -429,9 +501,9 @@ function getFlangeTipThickness(type, flangeWidth, webThickness, flangeThickness)
 		return Math.max(0, flangeThickness);
 	}
 
-	// For S-shapes, tf is measured midway between web face and flange tip.
-	halfFlangeRun = (flangeWidth - webThickness) / 4;
-	computedTipThickness = flangeThickness - (halfFlangeRun * S_FLANGE_INNER_FACE_SLOPE);
+	// For sloped-flange sections, tf is referenced midway between web face and flange tip.
+	referenceHalfRun = getFlangeReferenceHalfRun(type, flangeWidth, webThickness);
+	computedTipThickness = flangeThickness - (referenceHalfRun * S_FLANGE_INNER_FACE_SLOPE);
 
 	if (!isFinite(computedTipThickness)){
 		return Math.max(0, flangeThickness);
@@ -442,16 +514,16 @@ function getFlangeTipThickness(type, flangeWidth, webThickness, flangeThickness)
 
 
 function getFlangeWebThickness(type, flangeWidth, webThickness, flangeThickness, kDimension){
-	var halfFlangeRun;
+	var referenceHalfRun;
 	var computedWebThickness;
 
 	if (isSlopedFlangeSectionType(type) !== true){
 		return flangeThickness;
 	}
 
-	// AISC S-shapes have a tapered inner flange face with 2:12 slope.
-	halfFlangeRun = (flangeWidth - webThickness) / 4;
-	computedWebThickness = flangeThickness + (halfFlangeRun * S_FLANGE_INNER_FACE_SLOPE);
+	// AISC S/C/MC sections use a tapered inner flange face with 2:12 slope.
+	referenceHalfRun = getFlangeReferenceHalfRun(type, flangeWidth, webThickness);
+	computedWebThickness = flangeThickness + (referenceHalfRun * S_FLANGE_INNER_FACE_SLOPE);
 
 	if (!isFinite(computedWebThickness)){
 		return flangeThickness;
@@ -465,7 +537,10 @@ function getFlangeWebThickness(type, flangeWidth, webThickness, flangeThickness,
 }
 
 
-function getFlangeThicknessReferenceHalfWidth(type, flangeWidth, webThickness){
+function getFlangeThicknessReferenceXOffset(type, flangeWidth, webThickness){
+	var flangeProjection;
+	var webRightOffset;
+
 	if (!isFinite(flangeWidth)){
 		return 0;
 	}
@@ -474,8 +549,11 @@ function getFlangeThicknessReferenceHalfWidth(type, flangeWidth, webThickness){
 		return flangeWidth / 2;
 	}
 
-	// For sloped S flanges, tf is defined at the midpoint between web face and flange tip.
-	return (flangeWidth + webThickness) / 4;
+	flangeProjection = getFlangeProjection(type, flangeWidth, webThickness);
+	webRightOffset = getWebRightOffset(type, flangeWidth, webThickness);
+
+	// For sloped flanges, tf is defined at the midpoint between web face and flange tip.
+	return webRightOffset + (flangeProjection / 2);
 }
 
 
@@ -503,7 +581,7 @@ function getCurrentScale(){
 }
 
 
-function buildBeamCoordinates(){
+function buildSymmetricIBeamCoordinates(){
 	var halfB = b / 2;
 	var halfW = w / 2;
 	var insideTopAtTip = flangeTipThickness;
@@ -521,7 +599,46 @@ function buildBeamCoordinates(){
 		yCoords.push(toInt(Y0 + SCALE * yOffsets[i]));
 	}
 
-	return [xCoords, yCoords];
+	return {
+		coordinates: [xCoords, yCoords],
+		insideArcSegments: INSIDE_ARC_SEGMENT_INDEX,
+		outsideArcSegments: OUTSIDE_ARC_SEGMENT_INDEX
+	};
+}
+
+
+function buildChannelCoordinates(){
+	var left = -b / 2;
+	var right = b / 2;
+	var webRight = left + w;
+	var insideTopAtTip = flangeTipThickness;
+	var insideTopAtWeb = flangeWebThickness;
+	var insideBottomAtWeb = d - flangeWebThickness;
+	var insideBottomAtTip = d - flangeTipThickness;
+	var xOffsets = [left, right, right, webRight, webRight, right, right, left, left];
+	var yOffsets = [0, 0, insideTopAtTip, insideTopAtWeb, insideBottomAtWeb, insideBottomAtTip, d, d, 0];
+	var xCoords = [];
+	var yCoords = [];
+
+	for (var i=0; i<xOffsets.length; i++){
+		xCoords.push(toInt(X0 + SCALE * xOffsets[i]));
+		yCoords.push(toInt(Y0 + SCALE * yOffsets[i]));
+	}
+
+	return {
+		coordinates: [xCoords, yCoords],
+		insideArcSegments: CHANNEL_INSIDE_ARC_SEGMENT_INDEX,
+		outsideArcSegments: CHANNEL_OUTSIDE_ARC_SEGMENT_INDEX
+	};
+}
+
+
+function buildBeamCoordinates(){
+	if (isChannelSectionType(sectionType) === true){
+		return buildChannelCoordinates();
+	}
+
+	return buildSymmetricIBeamCoordinates();
 }
 
 
@@ -546,7 +663,10 @@ function setCoordDimsAndScale(){
 	setPropertyValues(shapeRow);
 
 	SCALE = getCurrentScale();
-	beamCoordinates = buildBeamCoordinates();
+	var profile = buildBeamCoordinates();
+	beamCoordinates = profile.coordinates;
+	activeInsideArcSegmentIndex = profile.insideArcSegments;
+	activeOutsideArcSegmentIndex = profile.outsideArcSegments;
 	xArray = beamCoordinates[0];
 	yArray = beamCoordinates[1];
 
@@ -708,11 +828,15 @@ function drawCanvas(){
 
 
 function isSectionTypeFilterEnabledForShapeSet(shapeSetKey){
-	return shapeSetKey === 'americanShapes' || shapeSetKey === 'canadianShapes';
+	return shapeSetKey === 'americanShapes' || shapeSetKey === 'canadianShapes' || shapeSetKey === 'europeanShapes' || shapeSetKey === 'britishShapes';
 }
 
 
 function getRowSectionType(row){
+	var normalizedName;
+	var normalizedNameNoSpaces;
+	var prefixedTypeMatch;
+
 	if (!row){
 		return '';
 	}
@@ -725,13 +849,12 @@ function getRowSectionType(row){
 		return '';
 	}
 
-	var normalizedName = String(row.name).toUpperCase();
-	var knownTypes = ['HSS', 'PIPE', '2L', 'WT', 'MT', 'ST', 'HP', 'MC', 'W', 'M', 'S', 'C', 'L'];
+	normalizedName = String(row.name).toUpperCase();
+	normalizedNameNoSpaces = normalizedName.replace(/\s+/g, '');
 
-	for (var i = 0; i < knownTypes.length; i++){
-		if (normalizedName.indexOf(knownTypes[i]) === 0){
-			return knownTypes[i];
-		}
+	prefixedTypeMatch = normalizedNameNoSpaces.match(/^([0-9]*[A-Z]+)/);
+	if (prefixedTypeMatch && prefixedTypeMatch[1]){
+		return prefixedTypeMatch[1];
 	}
 
 	return '';
