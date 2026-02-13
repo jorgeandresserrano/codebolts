@@ -53,12 +53,18 @@
 		
 		<div id='IE'></div>
 		
-		<div id ="container">
-			<div id='section-filter-container'></div>
-			<div id="data-container">
-				<canvas id="canvas"></canvas>
-				<div id="list-container"> </div>
-			</div>
+			<div id ="container">
+				<div id='section-filter-container'></div>
+					<div id="data-container">
+						<div id="canvas-tools">
+							<button id="copy-canvas" type="button" aria-label="Copy canvas image to clipboard" data-tooltip="Copy canvas image to clipboard">
+								<span class="copy-canvas-icon" aria-hidden="true"></span>
+								<span class="sr-only">Copy canvas image</span>
+							</button>
+						</div>
+					<canvas id="canvas"></canvas>
+					<div id="list-container"> </div>
+				</div>
 			
 			<div id="options-container">
 				<div id='zoom' class='button on'>Zoom</div>
