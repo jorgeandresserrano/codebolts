@@ -170,53 +170,22 @@ function drawBeam(){
 		return;
 	}
 
-	// x and y coordinates always have the same number of points.
-	var points = beamCoordinates[0].length;
-
 	context.clearRect(0, 0, canv.width, canv.height);
-	
-	context.beginPath();
-	context.moveTo(toCrispPixel(beamCoordinates[0][0]), toCrispPixel(beamCoordinates[1][0]));
-	
-	var inRadiusFromK1 = isFinite(k1) ? (k1 - (w / 2)) : NaN;
-	var inRadiusFromK = k - flangeWebThickness;
-	var inRadius = inRadiusFromK;
-	var outRadius = 0.3 * flangeTipThickness * SCALE;
 
-	if (isFinite(inRadiusFromK1) && inRadiusFromK1 < inRadiusFromK){
-		inRadius = inRadiusFromK1;
-	}
+	var profile = {
+		coordinates: beamCoordinates,
+		insideArcSegments: activeInsideArcSegmentIndex,
+		outsideArcSegments: activeOutsideArcSegmentIndex
+	};
+	var radii = getBeamCornerRadii({
+		k1: k1,
+		w: w,
+		k: k,
+		flangeWebThickness: flangeWebThickness,
+		flangeTipThickness: flangeTipThickness
+	}, SCALE);
 
-	inRadius = isFinite(inRadius) ? Math.max(0, inRadius * SCALE) : 0;
-	outRadius = isFinite(outRadius) ? Math.max(0, outRadius) : 0;
-
-	for (var i=1; i < points; i++){
-		if (activeInsideArcSegmentIndex[i] === true){
-			// inside arc
-			context.arcTo(toCrispPixel(beamCoordinates[0][i]),
-							toCrispPixel(beamCoordinates[1][i]),
-							toCrispPixel(beamCoordinates[0][i+1]),
-							toCrispPixel(beamCoordinates[1][i+1]),
-							inRadius);
-		} else if (activeOutsideArcSegmentIndex[i] === true) {
-			// outside arc
-			context.arcTo(toCrispPixel(beamCoordinates[0][i]),
-							toCrispPixel(beamCoordinates[1][i]),
-							toCrispPixel(beamCoordinates[0][i+1]),
-							toCrispPixel(beamCoordinates[1][i+1]),
-							outRadius);
-		} else {
-			// line
-			context.lineTo(toCrispPixel(beamCoordinates[0][i]),
-							toCrispPixel(beamCoordinates[1][i]));
-		}
-	}
-	
-	context.lineWidth = LINE_WIDTH;
-	context.strokeStyle = LINE_COLOR;
-	context.fillStyle = FILL_COLOR;
-	context.fill();
-	context.stroke();
+	drawBeamPath(profile, radii);
 
 }
 
@@ -414,21 +383,44 @@ function findBeamRowByName(rows, name){
 
 
 function setDimensionValues(shapeRow){
-	b = parseFloat(shapeRow.b);
-	d = parseFloat(shapeRow.d);
-	t = parseFloat(shapeRow.t);
-	w = parseFloat(shapeRow.w);
-	k = parseFloat(shapeRow.k);
-	k1 = parseFloat(shapeRow.k1);
-	sectionType = getRowSectionType(shapeRow);
-	flangeTipThickness = getFlangeTipThickness(sectionType, b, w, t);
-	flangeWebThickness = getFlangeWebThickness(sectionType, b, w, t, k);
-	flangeThicknessReferenceXOffset = getFlangeThicknessReferenceXOffset(sectionType, b, w);
+	applySectionModel(buildSectionModel(shapeRow));
+}
+
+
+function buildSectionModel(shapeRow){
+	var model = {};
+
+	model.b = parseFloat(shapeRow.b);
+	model.d = parseFloat(shapeRow.d);
+	model.t = parseFloat(shapeRow.t);
+	model.w = parseFloat(shapeRow.w);
+	model.k = parseFloat(shapeRow.k);
+	model.k1 = parseFloat(shapeRow.k1);
+	model.sectionType = getRowSectionType(shapeRow);
+	model.flangeTipThickness = getFlangeTipThickness(model.sectionType, model.b, model.w, model.t);
+	model.flangeWebThickness = getFlangeWebThickness(model.sectionType, model.b, model.w, model.t, model.k);
+	model.flangeThicknessReferenceXOffset = getFlangeThicknessReferenceXOffset(model.sectionType, model.b, model.w);
+
+	return model;
+}
+
+
+function applySectionModel(model){
+	b = model.b;
+	d = model.d;
+	t = model.t;
+	w = model.w;
+	k = model.k;
+	k1 = model.k1;
+	sectionType = model.sectionType;
+	flangeTipThickness = model.flangeTipThickness;
+	flangeWebThickness = model.flangeWebThickness;
+	flangeThicknessReferenceXOffset = model.flangeThicknessReferenceXOffset;
 }
 
 
 function isSlopedFlangeSectionType(type){
-	return type === 'S' || type === 'C' || type === 'MC' || type === 'M';
+	return type === 'S' || type === 'C' || type === 'MC';
 }
 
 
@@ -581,64 +573,126 @@ function getCurrentScale(){
 }
 
 
-function buildSymmetricIBeamCoordinates(){
-	var halfB = b / 2;
-	var halfW = w / 2;
-	var insideTopAtTip = flangeTipThickness;
-	var insideTopAtWeb = flangeWebThickness;
-	var insideBottomAtWeb = d - flangeWebThickness;
-	var insideBottomAtTip = d - flangeTipThickness;
-	var xOffsets = [0, halfB, halfB, halfW, halfW, halfB, halfB, -halfB, -halfB, -halfW, -halfW, -halfB, -halfB, 0];
-	var yOffsets = [0, 0, insideTopAtTip, insideTopAtWeb, insideBottomAtWeb, insideBottomAtTip, d, d, insideBottomAtTip, insideBottomAtWeb, insideTopAtWeb, insideTopAtTip, 0, 0];
+function projectOffsetsToCanvas(xOffsets, yOffsets, scale){
 	var xCoords = [];
 	var yCoords = [];
 
 	// Coordinates are intentionally integer-truncated. The 0.5 offset is applied during draw calls.
 	for (var i=0; i<xOffsets.length; i++){
-		xCoords.push(toInt(X0 + SCALE * xOffsets[i]));
-		yCoords.push(toInt(Y0 + SCALE * yOffsets[i]));
+		xCoords.push(toInt(X0 + scale * xOffsets[i]));
+		yCoords.push(toInt(Y0 + scale * yOffsets[i]));
 	}
 
+	return [xCoords, yCoords];
+}
+
+
+function buildSymmetricIBeamGeometry(model, scale){
+	var halfB = model.b / 2;
+	var halfW = model.w / 2;
+	var insideTopAtTip = model.flangeTipThickness;
+	var insideTopAtWeb = model.flangeWebThickness;
+	var insideBottomAtWeb = model.d - model.flangeWebThickness;
+	var insideBottomAtTip = model.d - model.flangeTipThickness;
+	var xOffsets = [0, halfB, halfB, halfW, halfW, halfB, halfB, -halfB, -halfB, -halfW, -halfW, -halfB, -halfB, 0];
+	var yOffsets = [0, 0, insideTopAtTip, insideTopAtWeb, insideBottomAtWeb, insideBottomAtTip, model.d, model.d, insideBottomAtTip, insideBottomAtWeb, insideTopAtWeb, insideTopAtTip, 0, 0];
+
 	return {
-		coordinates: [xCoords, yCoords],
+		coordinates: projectOffsetsToCanvas(xOffsets, yOffsets, scale),
 		insideArcSegments: INSIDE_ARC_SEGMENT_INDEX,
 		outsideArcSegments: OUTSIDE_ARC_SEGMENT_INDEX
 	};
 }
 
 
-function buildChannelCoordinates(){
-	var left = -b / 2;
-	var right = b / 2;
-	var webRight = left + w;
-	var insideTopAtTip = flangeTipThickness;
-	var insideTopAtWeb = flangeWebThickness;
-	var insideBottomAtWeb = d - flangeWebThickness;
-	var insideBottomAtTip = d - flangeTipThickness;
+function buildChannelGeometry(model, scale){
+	var left = -model.b / 2;
+	var right = model.b / 2;
+	var webRight = left + model.w;
+	var insideTopAtTip = model.flangeTipThickness;
+	var insideTopAtWeb = model.flangeWebThickness;
+	var insideBottomAtWeb = model.d - model.flangeWebThickness;
+	var insideBottomAtTip = model.d - model.flangeTipThickness;
 	var xOffsets = [left, right, right, webRight, webRight, right, right, left, left];
-	var yOffsets = [0, 0, insideTopAtTip, insideTopAtWeb, insideBottomAtWeb, insideBottomAtTip, d, d, 0];
-	var xCoords = [];
-	var yCoords = [];
-
-	for (var i=0; i<xOffsets.length; i++){
-		xCoords.push(toInt(X0 + SCALE * xOffsets[i]));
-		yCoords.push(toInt(Y0 + SCALE * yOffsets[i]));
-	}
+	var yOffsets = [0, 0, insideTopAtTip, insideTopAtWeb, insideBottomAtWeb, insideBottomAtTip, model.d, model.d, 0];
 
 	return {
-		coordinates: [xCoords, yCoords],
+		coordinates: projectOffsetsToCanvas(xOffsets, yOffsets, scale),
 		insideArcSegments: CHANNEL_INSIDE_ARC_SEGMENT_INDEX,
 		outsideArcSegments: CHANNEL_OUTSIDE_ARC_SEGMENT_INDEX
 	};
 }
 
 
-function buildBeamCoordinates(){
-	if (isChannelSectionType(sectionType) === true){
-		return buildChannelCoordinates();
+function isWideFlangeFamily(type){
+	return type === 'W' || type === 'M' || type === 'MP' || type === 'HP';
+}
+
+
+function buildBeamGeometry(model, scale){
+	if (isChannelSectionType(model.sectionType) === true){
+		return buildChannelGeometry(model, scale);
 	}
 
-	return buildSymmetricIBeamCoordinates();
+	// W, M and MP (plus HP) share the same symmetric I-beam drawing strategy.
+	if (isWideFlangeFamily(model.sectionType) === true){
+		return buildSymmetricIBeamGeometry(model, scale);
+	}
+
+	return buildSymmetricIBeamGeometry(model, scale);
+}
+
+
+function getBeamCornerRadii(model, scale){
+	var inRadiusFromK1 = isFinite(model.k1) ? (model.k1 - (model.w / 2)) : NaN;
+	var inRadiusFromK = model.k - model.flangeWebThickness;
+	var inRadius = inRadiusFromK;
+	var outRadius = 0.3 * model.flangeTipThickness * scale;
+
+	if (isFinite(inRadiusFromK1) && inRadiusFromK1 < inRadiusFromK){
+		inRadius = inRadiusFromK1;
+	}
+
+	return {
+		inside: isFinite(inRadius) ? Math.max(0, inRadius * scale) : 0,
+		outside: isFinite(outRadius) ? Math.max(0, outRadius) : 0
+	};
+}
+
+
+function drawBeamPath(profile, radii){
+	var points = profile.coordinates[0].length;
+
+	context.beginPath();
+	context.moveTo(toCrispPixel(profile.coordinates[0][0]), toCrispPixel(profile.coordinates[1][0]));
+
+	for (var i=1; i < points; i++){
+		if (profile.insideArcSegments[i] === true){
+			// inside arc
+			context.arcTo(toCrispPixel(profile.coordinates[0][i]),
+							toCrispPixel(profile.coordinates[1][i]),
+							toCrispPixel(profile.coordinates[0][i+1]),
+							toCrispPixel(profile.coordinates[1][i+1]),
+							radii.inside);
+		} else if (profile.outsideArcSegments[i] === true) {
+			// outside arc
+			context.arcTo(toCrispPixel(profile.coordinates[0][i]),
+							toCrispPixel(profile.coordinates[1][i]),
+							toCrispPixel(profile.coordinates[0][i+1]),
+							toCrispPixel(profile.coordinates[1][i+1]),
+							radii.outside);
+		} else {
+			// line
+			context.lineTo(toCrispPixel(profile.coordinates[0][i]),
+							toCrispPixel(profile.coordinates[1][i]));
+		}
+	}
+
+	context.lineWidth = LINE_WIDTH;
+	context.strokeStyle = LINE_COLOR;
+	context.fillStyle = FILL_COLOR;
+	context.fill();
+	context.stroke();
 }
 
 
@@ -659,11 +713,12 @@ function setCoordDimsAndScale(){
 		return;
 	}
 
-	setDimensionValues(shapeRow);
+	var sectionModel = buildSectionModel(shapeRow);
+	applySectionModel(sectionModel);
 	setPropertyValues(shapeRow);
 
 	SCALE = getCurrentScale();
-	var profile = buildBeamCoordinates();
+	var profile = buildBeamGeometry(sectionModel, SCALE);
 	beamCoordinates = profile.coordinates;
 	activeInsideArcSegmentIndex = profile.insideArcSegments;
 	activeOutsideArcSegmentIndex = profile.outsideArcSegments;
