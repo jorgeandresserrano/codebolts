@@ -30,7 +30,7 @@ var currentShapes, canadianShapes, americanShapes, europeanShapes, britishShapes
 	currentShapeSetKey, selectedBeamByShapeSet, listScrollTopByShapeSet, selectedSectionTypeByShapeSet, standardScaleBySectionTypeByShapeSet, canvasCopyFeedbackTimeoutId;
 
 // Current section dimensions.
-var b, d, t, w, k, k1, sectionType, flangeTipThickness, flangeWebThickness, flangeThicknessReferenceXOffset;
+var b, d, t, w, k, k1, rf, rtoe, sectionType, flangeTipThickness, flangeWebThickness, flangeThicknessReferenceXOffset;
 
 // Current section properties.
 var mass, area,	ix,	sx,	rx,	zx,	iy,	sy,	ry,	zy, j, cw;
@@ -167,6 +167,8 @@ var CHANNEL_INSIDE_ARC_SEGMENT_INDEX = {3: true, 4: true};
 var CHANNEL_OUTSIDE_ARC_SEGMENT_INDEX = {2: true, 5: true};
 var TEE_INSIDE_ARC_SEGMENT_INDEX = {3: true, 6: true};
 var TEE_OUTSIDE_ARC_SEGMENT_INDEX = {2: true, 7: true};
+var ANGLE_INSIDE_ARC_SEGMENT_INDEX = {2: true};
+var ANGLE_OUTSIDE_ARC_SEGMENT_INDEX = {1: true, 3: true};
 var activeInsideArcSegmentIndex = INSIDE_ARC_SEGMENT_INDEX;
 var activeOutsideArcSegmentIndex = OUTSIDE_ARC_SEGMENT_INDEX;
 var S_FLANGE_INNER_FACE_SLOPE = 2 / 12;
@@ -293,12 +295,30 @@ function isDoubleMcSectionRow(row){
 }
 
 
+function isDoubleCSectionRow(row){
+	var rowName;
+	var normalizedNameNoSpaces;
+
+	if (!row){
+		return false;
+	}
+
+	rowName = firstNonEmptyString([row.name, row.Name]).toUpperCase();
+	normalizedNameNoSpaces = rowName.replace(/\s+/g, '');
+
+	return /^2C/.test(normalizedNameNoSpaces);
+}
+
+
 function getFilterSectionType(row){
 	var rawType = getRowSectionType(row);
 	var filterType = mapRawSectionTypeToFilterType(rawType);
 
 	// Double-channel built-up sections (2MC...) are intentionally excluded from the MC list.
 	if (filterType === 'MC' && isDoubleMcSectionRow(row) === true){
+		return '';
+	}
+	if (filterType === 'C' && isDoubleCSectionRow(row) === true){
 		return '';
 	}
 
@@ -493,6 +513,18 @@ function getUnitScaleDivisor(unitLabel){
 }
 
 
+function normalizeDisplayNumericValue(value){
+	var numericValue = parseFloat(value);
+
+	if (!isFinite(numericValue)){
+		return value;
+	}
+
+	// Remove binary floating-point display noise (e.g. 0.49821499999999996).
+	return Number(numericValue.toPrecision(15));
+}
+
+
 function scalePropertyValueForDisplay(index, value, units){
 	var numericValue = parseFloat(value);
 	var divisor = getUnitScaleDivisor(units[index]);
@@ -502,20 +534,24 @@ function scalePropertyValueForDisplay(index, value, units){
 	}
 
 	if (!isFinite(divisor) || divisor === 0){
-		return numericValue;
+		return normalizeDisplayNumericValue(numericValue);
 	}
 
-	return numericValue / divisor;
+	return normalizeDisplayNumericValue(numericValue / divisor);
 }
 
 
 function formatPropertyValue(index, value){
+	var normalizedNumericValue = normalizeDisplayNumericValue(value);
+	var numericValue = parseFloat(normalizedNumericValue);
+
 	// rx (index 5) and ry (index 9) are shown with a fixed single decimal place.
-	if (index === 5 || index === 9){
-		var numericValue = parseFloat(value);
-		if (isFinite(numericValue)){
-			return numericValue.toFixed(1);
-		}
+	if ((index === 5 || index === 9) && isFinite(numericValue)){
+		return numericValue.toFixed(1);
+	}
+
+	if (isFinite(numericValue)){
+		return normalizedNumericValue;
 	}
 
 	return value;
@@ -618,6 +654,12 @@ function drawBeam(){
 		outsideArcSegments: activeOutsideArcSegmentIndex
 	};
 	var radii = getBeamCornerRadii({
+		sectionType: sectionType,
+		b: b,
+		d: d,
+		t: t,
+		rf: rf,
+		rtoe: rtoe,
 		k1: k1,
 		w: w,
 		k: k,
@@ -651,7 +693,87 @@ function writePropAndTitle(){
 }
 
 
+function formatDimensionValue(value){
+	var numericValue = parseFloat(value);
+	if (isFinite(numericValue)){
+		return numericValue.toFixed(1);
+	}
+	return value;
+}
+
+
+function drawAngleDimensions(){
+	var style = 4;
+	var which = 3;
+	var angle = Math.PI/8;
+	var dist = 12;
+	var aOff = DIMENSION_ANCHOR_OFFSET;
+	var lOff = DIMENSION_TICK_OFFSET;
+	var sectionLeftOffset = getSectionLeftOffset(sectionType, b);
+	var sectionRightOffset = getSectionRightOffset(sectionType, b);
+	var legThickness = isFinite(t) && t > 0 ? t : w;
+	var widthDimensionY = Y0 - TOP_WIDTH_DIMENSION_GAP;
+	var leftDepthDimensionX = X0 + sectionLeftOffset*SCALE - 2*aOff - LEFT_DEPTH_DIMENSION_EXTRA_OFFSET;
+	var sectionBottomY = Y0 + d*SCALE;
+	var leftLegLeftX = X0 + sectionLeftOffset*SCALE;
+	var leftLegRightX;
+	var x1;
+	var y1;
+	var x2;
+	var y2;
+	var tx;
+	var ty;
+
+	if (!isFinite(legThickness) || legThickness <= 0){
+		legThickness = Math.min(b, d) * 0.1;
+	}
+	legThickness = Math.min(legThickness, b, d);
+	leftLegRightX = leftLegLeftX + legThickness*SCALE;
+
+	// 'b' (leg length) dimension at the top.
+	x1 = X0 + sectionLeftOffset*SCALE;
+	y1 = widthDimensionY;
+	x2 = X0 + sectionRightOffset*SCALE;
+	y2 = y1;
+	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
+	drawOneLine(x1, Y0 - lOff, x1, widthDimensionY - lOff);
+	drawOneLine(x2, Y0 - lOff, x2, widthDimensionY - lOff);
+	tx = X0;
+	ty = widthDimensionY - 4;
+	writeOneText('400', '15', 'Roboto', 'center', '#484848', formatDimensionValue(b), tx, ty);
+
+	// 'd' (leg length) dimension on the left.
+	x1 = leftDepthDimensionX;
+	y1 = Y0;
+	x2 = x1;
+	y2 = sectionBottomY;
+	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
+	drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y1, leftDepthDimensionX - lOff, y1);
+	drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y2, leftDepthDimensionX - lOff, y2);
+	tx = leftDepthDimensionX - 5;
+	ty = Y0 + d/2*SCALE + 15/2;
+	writeOneText('400', '15', 'Roboto', 'right', '#484848', formatDimensionValue(d), tx, ty);
+
+	// 'w' (vertical leg thickness) shown with horizontal arrows near the upper-third.
+	y1 = Y0 + d*SCALE*0.35;
+	x1 = leftLegLeftX - aOff*0.9;
+	x2 = leftLegLeftX;
+	drawArrow(context, x1, y1, x2, y1, style, 1, angle, dist);
+	x1 = leftLegRightX + aOff*0.9;
+	x2 = leftLegRightX;
+	drawArrow(context, x1, y1, x2, y1, style, 1, angle, dist);
+	tx = leftLegRightX + aOff*0.9 + 3;
+	ty = y1 + 14/2;
+	writeOneText('400', '15', 'Roboto', 'left', '#484848', formatDimensionValue(legThickness), tx, ty);
+}
+
+
 function drawDimensions(){
+	if (isAngleSectionType(sectionType) === true){
+		drawAngleDimensions();
+		return;
+	}
+
 	var isTeeSection = isTeeSectionType(sectionType);
 	var style = 4,
 	which = 3,
@@ -691,13 +813,6 @@ function drawDimensions(){
 	var rightDimensionTextX = rightDimensionX + RIGHT_DIMENSION_TEXT_OFFSET;
 	var thicknessReferenceX = X0 + thicknessReferenceXOffset*SCALE;
 	var rightWitnessStartX = Math.max(thicknessReferenceX, rightSectionFaceX + rightWitnessObjectGap);
-	var formatDimensionValue = function(value){
-		var numericValue = parseFloat(value);
-		if (isFinite(numericValue)){
-			return numericValue.toFixed(1);
-		}
-		return value;
-	};
 	
 	// 'b' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -897,10 +1012,12 @@ function normalizeLegacyShapeRow(row){
 	normalized.a = areaValue;
 	normalized.d = firstFiniteNumber([row.d, row.D]);
 	normalized.b = firstFiniteNumber([row.b, row.Bf1, row.Bf2]);
-	normalized.w = firstFiniteNumber([row.w, row.tw]);
+	normalized.w = firstFiniteNumber([row.w, row.tw, row.t, row.tf1, row.tf2]);
 	normalized.t = firstFiniteNumber([row.t, row.tf1, row.tf2]);
 	normalized.k = firstFiniteNumber([row.k]);
 	normalized.k1 = firstFiniteNumber([row.k1]);
+	normalized.rf = firstFiniteNumber([row.rf, row.Rf]);
+	normalized.rtoe = firstFiniteNumber([row.rtoe, row.Rtoe]);
 	normalized.ix = ixValue;
 	normalized.sx = firstFiniteNumber([row.sx, row.Zex]);
 	normalized.rx = computeRadius(ixValue, areaValue);
@@ -920,7 +1037,7 @@ function normalizeLegacyShapeRow(row){
 function normalizeWorkbookShapeRow(row){
 	var normalized = {};
 	var flangeThickness = firstFiniteNumber([row.tf1, row.tf2]);
-	var webThickness = firstFiniteNumber([row.tw]);
+	var webThickness = firstFiniteNumber([row.tw, flangeThickness]);
 	var rootRadius = firstFiniteNumber([row.Rf]);
 	var kValue = firstFiniteNumber([
 		row.k,
@@ -946,6 +1063,8 @@ function normalizeWorkbookShapeRow(row){
 	normalized.t = flangeThickness;
 	normalized.k = kValue;
 	normalized.k1 = k1Value;
+	normalized.rf = firstFiniteNumber([row.Rf, row.rf]);
+	normalized.rtoe = firstFiniteNumber([row.Rtoe, row.rtoe]);
 	normalized.ix = ixValue;
 	normalized.sx = firstFiniteNumber([row.Zex, row.sx]);
 	normalized.rx = computeRadius(ixValue, areaValue);
@@ -1056,6 +1175,8 @@ function buildSectionModel(shapeRow){
 	model.w = parseFloat(shapeRow.w);
 	model.k = parseFloat(shapeRow.k);
 	model.k1 = parseFloat(shapeRow.k1);
+	model.rf = parseFloat(shapeRow.rf);
+	model.rtoe = parseFloat(shapeRow.rtoe);
 	model.sectionType = getRowSectionType(shapeRow);
 	model.flangeTipThickness = getFlangeTipThickness(model.sectionType, model.b, model.w, model.t);
 	model.flangeWebThickness = getFlangeWebThickness(model.sectionType, model.b, model.w, model.t, model.k);
@@ -1072,6 +1193,8 @@ function applySectionModel(model){
 	w = model.w;
 	k = model.k;
 	k1 = model.k1;
+	rf = model.rf;
+	rtoe = model.rtoe;
 	sectionType = model.sectionType;
 	flangeTipThickness = model.flangeTipThickness;
 	flangeWebThickness = model.flangeWebThickness;
@@ -1317,8 +1440,38 @@ function buildTeeGeometry(model, scale){
 }
 
 
+function buildAngleGeometry(model, scale){
+	var left = -model.b / 2;
+	var right = model.b / 2;
+	var thickness = isFinite(model.t) && model.t > 0 ? model.t : model.w;
+	var xOffsets;
+	var yOffsets;
+
+	if (!isFinite(thickness) || thickness <= 0){
+		thickness = Math.min(model.b, model.d) * 0.1;
+	}
+	thickness = Math.min(thickness, model.b, model.d);
+
+	xOffsets = [left, left + thickness, left + thickness, right, right, left, left];
+	yOffsets = [0, 0, model.d - thickness, model.d - thickness, model.d, model.d, 0];
+
+	return {
+		coordinates: projectOffsetsToCanvas(xOffsets, yOffsets, scale),
+		insideArcSegments: ANGLE_INSIDE_ARC_SEGMENT_INDEX,
+		outsideArcSegments: ANGLE_OUTSIDE_ARC_SEGMENT_INDEX
+	};
+}
+
+
 function isWideFlangeFamily(type){
 	return type === 'W' || type === 'M' || type === 'MP' || type === 'HP';
+}
+
+
+function isAngleSectionType(type){
+	var filterType = mapRawSectionTypeToFilterType(type);
+
+	return filterType === 'L';
 }
 
 
@@ -1338,6 +1491,10 @@ function buildBeamGeometry(model, scale){
 		return buildTeeGeometry(model, scale);
 	}
 
+	if (isAngleSectionType(model.sectionType) === true){
+		return buildAngleGeometry(model, scale);
+	}
+
 	// W, M and MP (plus HP) share the same symmetric I-beam drawing strategy.
 	if (isWideFlangeFamily(model.sectionType) === true){
 		return buildSymmetricIBeamGeometry(model, scale);
@@ -1348,6 +1505,35 @@ function buildBeamGeometry(model, scale){
 
 
 function getBeamCornerRadii(model, scale){
+	if (isAngleSectionType(model.sectionType) === true){
+		var angleThickness = isFinite(model.t) && model.t > 0 ? model.t : model.w;
+		var maxInsideRadius;
+		var maxOutsideRadius;
+		var angleInside = isFinite(model.rf) ? model.rf : NaN;
+		var angleOutside = isFinite(model.rtoe) ? model.rtoe : NaN;
+
+		if (!isFinite(angleThickness) || angleThickness <= 0){
+			angleThickness = Math.max(0, Math.min(model.b, model.d) * 0.1);
+		}
+		maxInsideRadius = Math.max(0, Math.min(model.b - angleThickness, model.d - angleThickness));
+		maxOutsideRadius = Math.max(0, angleThickness);
+
+		if (!isFinite(angleInside) || angleInside < 0){
+			angleInside = 0;
+		}
+		if (!isFinite(angleOutside) || angleOutside < 0){
+			angleOutside = 0;
+		}
+
+		angleInside = Math.min(angleInside, maxInsideRadius);
+		angleOutside = Math.min(angleOutside, maxOutsideRadius);
+
+		return {
+			inside: angleInside * scale,
+			outside: angleOutside * scale
+		};
+	}
+
 	var inRadiusFromK1 = isFinite(model.k1) ? (model.k1 - (model.w / 2)) : NaN;
 	var inRadiusFromK = model.k - model.flangeWebThickness;
 	var inRadius = inRadiusFromK;
