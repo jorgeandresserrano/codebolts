@@ -735,6 +735,47 @@ function drawRoundedRectPath(x, y, width, height, radius){
 }
 
 
+function getHssCornerRadii(){
+	var wallThickness = getClosedSectionWallThickness();
+	var insideRadius = (isFinite(rf) && rf > 0) ? rf : NaN;
+	var outsideRadius = (isFinite(rtoe) && rtoe > 0) ? rtoe : NaN;
+	var maxOuterRadius = Math.max(0, Math.min(b, d) / 2);
+	var maxInnerRadius = Math.max(0, Math.min((b - 2 * wallThickness) / 2, (d - 2 * wallThickness) / 2));
+
+	// Keep radii physically consistent when only one side is provided.
+	if (!isFinite(insideRadius) && isFinite(outsideRadius)){
+		insideRadius = outsideRadius - wallThickness;
+	}
+	if (!isFinite(outsideRadius) && isFinite(insideRadius)){
+		outsideRadius = insideRadius + wallThickness;
+	}
+
+	// HSS datasets frequently store Rf/Rtoe as zero placeholders. Use a realistic fallback.
+	if (!isFinite(insideRadius) || insideRadius <= 0){
+		insideRadius = wallThickness;
+	}
+	if (!isFinite(outsideRadius) || outsideRadius <= 0){
+		outsideRadius = insideRadius + wallThickness;
+	}
+
+	insideRadius = Math.max(0, Math.min(insideRadius, maxInnerRadius));
+	outsideRadius = Math.max(0, Math.min(outsideRadius, maxOuterRadius));
+
+	// Ensure outside corner is not tighter than inside + thickness.
+	if (outsideRadius < insideRadius + wallThickness){
+		outsideRadius = Math.min(maxOuterRadius, insideRadius + wallThickness);
+	}
+	if (insideRadius > outsideRadius - wallThickness){
+		insideRadius = Math.max(0, outsideRadius - wallThickness);
+	}
+
+	return {
+		inside: insideRadius,
+		outside: outsideRadius
+	};
+}
+
+
 function drawHssSection(){
 	var outerWidth = b * SCALE;
 	var outerHeight = d * SCALE;
@@ -742,8 +783,9 @@ function drawHssSection(){
 	var wallThicknessPx = wallThickness * SCALE;
 	var xLeft = X0 - (outerWidth / 2);
 	var yTop = Y0;
-	var outerRadius = isFinite(rtoe) ? rtoe : (isFinite(rf) ? (rf + wallThickness) : wallThickness * 1.5);
-	var innerRadius = isFinite(rf) ? rf : Math.max(0, outerRadius - wallThickness);
+	var hssRadii = getHssCornerRadii();
+	var outerRadius = hssRadii.outside;
+	var innerRadius = hssRadii.inside;
 	var outerRadiusPx = Math.max(0, outerRadius * SCALE);
 	var innerRadiusPx = Math.max(0, innerRadius * SCALE);
 	var innerX;
@@ -801,9 +843,9 @@ function drawHssDimensions(){
 	var wallThickness = getClosedSectionWallThickness();
 	var widthDimensionY = Y0 - TOP_WIDTH_DIMENSION_GAP;
 	var leftDepthDimensionX = X0 + sectionLeftOffset*SCALE - 2*aOff - LEFT_DEPTH_DIMENSION_EXTRA_OFFSET;
-	var rightDimensionX = X0 + sectionRightOffset*SCALE + RIGHT_DIMENSION_CLEARANCE;
-	var rightDimensionTickX = rightDimensionX + lOff;
-	var rightDimensionTextX = rightDimensionX + RIGHT_DIMENSION_TEXT_OFFSET;
+	var wallThicknessDimensionY = isCircularHssType(sectionType) === true ? (Y0 + d*SCALE*0.5) : (Y0 + d*SCALE*0.35);
+	var outerRightWallX = X0 + sectionRightOffset*SCALE;
+	var innerRightWallX = outerRightWallX - wallThickness*SCALE;
 	var x1;
 	var y1;
 	var x2;
@@ -835,16 +877,16 @@ function drawHssDimensions(){
 	ty = Y0 + d/2*SCALE + 15/2;
 	writeOneText('400', '15', 'Roboto', 'right', '#484848', formatDimensionValue(d), tx, ty);
 
-	// 't' wall thickness dimension near the top-right corner.
-	x1 = rightDimensionX;
-	y1 = Y0;
-	x2 = x1;
-	y2 = Y0 + wallThickness*SCALE;
-	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
-	drawOneLine(X0 + sectionRightOffset*SCALE, y1, rightDimensionTickX, y1);
-	drawOneLine(X0 + sectionRightOffset*SCALE, y2, rightDimensionTickX, y2);
-	tx = rightDimensionTextX;
-	ty = (y1 + y2)/2 + 14/2;
+	// 't' wall thickness shown like beam web thickness: opposing horizontal arrows.
+	y1 = wallThicknessDimensionY;
+	x1 = innerRightWallX - aOff*0.9;
+	x2 = innerRightWallX;
+	drawArrow(context, x1, y1, x2, y1, style, 1, angle, dist);
+	x1 = outerRightWallX + aOff*0.9;
+	x2 = outerRightWallX;
+	drawArrow(context, x1, y1, x2, y1, style, 1, angle, dist);
+	tx = outerRightWallX + aOff*0.9 + 3;
+	ty = y1 + 14/2;
 	writeOneText('400', '15', 'Roboto', 'left', '#484848', formatDimensionValue(wallThickness), tx, ty);
 }
 
