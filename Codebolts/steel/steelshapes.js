@@ -545,16 +545,16 @@ function formatPropertyValue(index, value){
 	var normalizedNumericValue = normalizeDisplayNumericValue(value);
 	var numericValue = parseFloat(normalizedNumericValue);
 
+	if (!isFinite(numericValue)){
+		return 'N/A';
+	}
+
 	// rx (index 5) and ry (index 9) are shown with a fixed single decimal place.
-	if ((index === 5 || index === 9) && isFinite(numericValue)){
+	if (index === 5 || index === 9){
 		return numericValue.toFixed(1);
 	}
 
-	if (isFinite(numericValue)){
-		return normalizedNumericValue;
-	}
-
-	return value;
+	return normalizedNumericValue;
 }
 
 
@@ -667,6 +667,11 @@ function drawBeam(){
 		flangeTipThickness: flangeTipThickness
 	}, SCALE);
 
+	if (isHssSectionType(sectionType) === true){
+		drawHssSection();
+		return;
+	}
+
 	drawBeamPath(profile, radii);
 
 }
@@ -686,7 +691,8 @@ function writePropAndTitle(){
 	for (var i=1; i<PROPERTY_LABELS.length; i++){
 		var scaledValue = scalePropertyValueForDisplay(i, values[i], units);
 		var formattedValue = formatPropertyValue(i, scaledValue);
-		var propertyText = String(PROPERTY_LABELS[i]) + String(formattedValue) + ' ' + String(units[i]);
+		var unitSuffix = (formattedValue === 'N/A') ? '' : (' ' + String(units[i]));
+		var propertyText = String(PROPERTY_LABELS[i]) + String(formattedValue) + unitSuffix;
 		writeOneText('400', '15', 'Roboto', 'left', '#2B2B2B', propertyText, PROPERTY_X_LAYOUT[i], PROPERTY_Y_LAYOUT[i]);
 	}
 	
@@ -699,6 +705,147 @@ function formatDimensionValue(value){
 		return numericValue.toFixed(1);
 	}
 	return value;
+}
+
+
+function getClosedSectionWallThickness(){
+	var wallThickness = isFinite(t) && t > 0 ? t : w;
+
+	if (!isFinite(wallThickness) || wallThickness <= 0){
+		wallThickness = Math.max(0, Math.min(b, d) * 0.1);
+	}
+
+	return Math.min(wallThickness, b / 2, d / 2);
+}
+
+
+function drawRoundedRectPath(x, y, width, height, radius){
+	var r = Math.max(0, Math.min(radius, width / 2, height / 2));
+
+	context.moveTo(x + r, y);
+	context.lineTo(x + width - r, y);
+	context.arcTo(x + width, y, x + width, y + r, r);
+	context.lineTo(x + width, y + height - r);
+	context.arcTo(x + width, y + height, x + width - r, y + height, r);
+	context.lineTo(x + r, y + height);
+	context.arcTo(x, y + height, x, y + height - r, r);
+	context.lineTo(x, y + r);
+	context.arcTo(x, y, x + r, y, r);
+	context.closePath();
+}
+
+
+function drawHssSection(){
+	var outerWidth = b * SCALE;
+	var outerHeight = d * SCALE;
+	var wallThickness = getClosedSectionWallThickness();
+	var wallThicknessPx = wallThickness * SCALE;
+	var xLeft = X0 - (outerWidth / 2);
+	var yTop = Y0;
+	var outerRadius = isFinite(rtoe) ? rtoe : (isFinite(rf) ? (rf + wallThickness) : wallThickness * 1.5);
+	var innerRadius = isFinite(rf) ? rf : Math.max(0, outerRadius - wallThickness);
+	var outerRadiusPx = Math.max(0, outerRadius * SCALE);
+	var innerRadiusPx = Math.max(0, innerRadius * SCALE);
+	var innerX;
+	var innerY;
+	var innerWidth;
+	var innerHeight;
+
+	if (isCircularHssType(sectionType) === true){
+		var cx = X0;
+		var cy = Y0 + (outerHeight / 2);
+		var outerRad = Math.min(outerWidth, outerHeight) / 2;
+		var innerRad = Math.max(0, outerRad - wallThicknessPx);
+
+		context.beginPath();
+		context.arc(cx, cy, outerRad, 0, Math.PI * 2, false);
+		if (innerRad > 0){
+			context.moveTo(cx + innerRad, cy);
+			context.arc(cx, cy, innerRad, 0, Math.PI * 2, false);
+		}
+		context.lineWidth = LINE_WIDTH;
+		context.strokeStyle = LINE_COLOR;
+		context.fillStyle = FILL_COLOR;
+		context.fill('evenodd');
+		context.stroke();
+		return;
+	}
+
+	innerX = xLeft + wallThicknessPx;
+	innerY = yTop + wallThicknessPx;
+	innerWidth = outerWidth - (2 * wallThicknessPx);
+	innerHeight = outerHeight - (2 * wallThicknessPx);
+
+	context.beginPath();
+	drawRoundedRectPath(xLeft, yTop, outerWidth, outerHeight, outerRadiusPx);
+	if (innerWidth > 0 && innerHeight > 0){
+		drawRoundedRectPath(innerX, innerY, innerWidth, innerHeight, innerRadiusPx);
+	}
+	context.lineWidth = LINE_WIDTH;
+	context.strokeStyle = LINE_COLOR;
+	context.fillStyle = FILL_COLOR;
+	context.fill('evenodd');
+	context.stroke();
+}
+
+
+function drawHssDimensions(){
+	var style = 4;
+	var which = 3;
+	var angle = Math.PI/8;
+	var dist = 12;
+	var aOff = DIMENSION_ANCHOR_OFFSET;
+	var lOff = DIMENSION_TICK_OFFSET;
+	var sectionLeftOffset = getSectionLeftOffset(sectionType, b);
+	var sectionRightOffset = getSectionRightOffset(sectionType, b);
+	var wallThickness = getClosedSectionWallThickness();
+	var widthDimensionY = Y0 - TOP_WIDTH_DIMENSION_GAP;
+	var leftDepthDimensionX = X0 + sectionLeftOffset*SCALE - 2*aOff - LEFT_DEPTH_DIMENSION_EXTRA_OFFSET;
+	var rightDimensionX = X0 + sectionRightOffset*SCALE + RIGHT_DIMENSION_CLEARANCE;
+	var rightDimensionTickX = rightDimensionX + lOff;
+	var rightDimensionTextX = rightDimensionX + RIGHT_DIMENSION_TEXT_OFFSET;
+	var x1;
+	var y1;
+	var x2;
+	var y2;
+	var tx;
+	var ty;
+
+	// 'b' dimension arrow.
+	x1 = X0 + sectionLeftOffset*SCALE;
+	y1 = widthDimensionY;
+	x2 = X0 + sectionRightOffset*SCALE;
+	y2 = y1;
+	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
+	drawOneLine(x1, Y0 - lOff, x1, widthDimensionY - lOff);
+	drawOneLine(x2, Y0 - lOff, x2, widthDimensionY - lOff);
+	tx = X0;
+	ty = widthDimensionY - 4;
+	writeOneText('400', '15', 'Roboto', 'center', '#484848', formatDimensionValue(b), tx, ty);
+
+	// 'd' dimension arrow.
+	x1 = leftDepthDimensionX;
+	y1 = Y0;
+	x2 = x1;
+	y2 = Y0 + d*SCALE;
+	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
+	drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y1, leftDepthDimensionX - lOff, y1);
+	drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y2, leftDepthDimensionX - lOff, y2);
+	tx = leftDepthDimensionX - 5;
+	ty = Y0 + d/2*SCALE + 15/2;
+	writeOneText('400', '15', 'Roboto', 'right', '#484848', formatDimensionValue(d), tx, ty);
+
+	// 't' wall thickness dimension near the top-right corner.
+	x1 = rightDimensionX;
+	y1 = Y0;
+	x2 = x1;
+	y2 = Y0 + wallThickness*SCALE;
+	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
+	drawOneLine(X0 + sectionRightOffset*SCALE, y1, rightDimensionTickX, y1);
+	drawOneLine(X0 + sectionRightOffset*SCALE, y2, rightDimensionTickX, y2);
+	tx = rightDimensionTextX;
+	ty = (y1 + y2)/2 + 14/2;
+	writeOneText('400', '15', 'Roboto', 'left', '#484848', formatDimensionValue(wallThickness), tx, ty);
 }
 
 
@@ -769,6 +916,11 @@ function drawAngleDimensions(){
 
 
 function drawDimensions(){
+	if (isHssSectionType(sectionType) === true){
+		drawHssDimensions();
+		return;
+	}
+
 	if (isAngleSectionType(sectionType) === true){
 		drawAngleDimensions();
 		return;
@@ -1465,6 +1617,24 @@ function buildAngleGeometry(model, scale){
 
 function isWideFlangeFamily(type){
 	return type === 'W' || type === 'M' || type === 'MP' || type === 'HP';
+}
+
+
+function isHssSectionType(type){
+	var filterType = mapRawSectionTypeToFilterType(type);
+
+	return filterType === 'HSS';
+}
+
+
+function isCircularHssType(type){
+	var rawType = String(type || '').toUpperCase();
+
+	return rawType === 'HSS C' ||
+		rawType === 'HSS C A500' ||
+		rawType === 'CHS' ||
+		rawType === 'CHS C250' ||
+		rawType === 'CHS C350';
 }
 
 
