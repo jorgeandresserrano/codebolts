@@ -69,7 +69,7 @@ var ANGLE_SECTION_ORIGIN_Y_SHIFT = 24;
 var PROPERTY_LABELS = ['title', 'Dead Load: ', 'Area: ', 'Ix: ', 'Sx: ', 'rx: ', 'Zx: ', 'Iy: ', 'Sy: ', 'ry: ', 'Zy: ', 'J: ', 'Cw: '];
 var PROPERTY_X_LAYOUT = [0, PROPERTY_X_COL_1, PROPERTY_X_COL_1, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_1, PROPERTY_X_COL_1];
 var PROPERTY_Y_LAYOUT = [0, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP)];
-var SECTION_TYPE_FILTER_ORDER = ['W', 'M', 'S', 'HP', 'C', 'MC', 'L', 'WT', 'MT', 'ST', 'HSS', 'PIPE'];
+var SECTION_TYPE_FILTER_ORDER = ['W', 'M', 'S', 'HP', 'C', 'MC', 'LE', 'LU', 'WT', 'MT', 'ST', 'HSS', 'PIPE'];
 var SECTION_TYPE_FILTER_MAP = {
 	W: 'W',
 	UB: 'W',
@@ -111,18 +111,19 @@ var SECTION_TYPE_FILTER_MAP = {
 	SC: 'S',
 	TFB: 'S',
 	SLB: 'SLB',
-	L: 'L',
-	'L E': 'L',
-	'L U': 'L',
-	LE: 'L',
-	LU: 'L',
-	EA: 'L',
-	UA: 'L',
-	CEA: 'L',
-	'A E': 'L',
-	'A U': 'L',
-	'LC E': 'L',
-	'LC U': 'L',
+	L: 'LE',
+	'L E': 'LE',
+	'L U': 'LU',
+	LE: 'LE',
+	LU: 'LU',
+	EA: 'LE',
+	UA: 'LU',
+	CEA: 'LE',
+	CUA: 'LU',
+	'A E': 'LE',
+	'A U': 'LU',
+	'LC E': 'LE',
+	'LC U': 'LU',
 	WT: 'WT',
 	UBT: 'WT',
 	UCT: 'WT',
@@ -1712,7 +1713,7 @@ function isCircularHssType(type){
 function isAngleSectionType(type){
 	var filterType = mapRawSectionTypeToFilterType(type);
 
-	return filterType === 'L';
+	return filterType === 'LE' || filterType === 'LU';
 }
 
 
@@ -2185,6 +2186,18 @@ function getActiveSectionType(rows){
 }
 
 
+function getSectionTypeFilterDisplayLabel(type){
+	if (type === 'LE'){
+		return 'Le';
+	}
+	if (type === 'LU'){
+		return 'Lu';
+	}
+
+	return type;
+}
+
+
 function renderSectionTypeFilter(rows){
 	var container = $('#section-filter-container');
 	var availableTypes;
@@ -2213,7 +2226,8 @@ function renderSectionTypeFilter(rows){
 	for (i = 0; i < SECTION_TYPE_FILTER_ORDER.length; i++){
 		var type = SECTION_TYPE_FILTER_ORDER[i];
 		var onClass = (type === activeType) ? ' on' : '';
-		html.push("<div class='button section-type" + onClass + "' data-section-type='" + type + "'>" + type + "</div>");
+		var label = getSectionTypeFilterDisplayLabel(type);
+		html.push("<div class='button section-type" + onClass + "' data-section-type='" + type + "'>" + label + "</div>");
 	}
 
 	container.html(html.join('')).show();
