@@ -64,6 +64,7 @@ var RIGHT_DIMENSION_TEXT_OFFSET = DIMENSION_TICK_OFFSET + 5;
 var SCALE_PRESENTATION_FACTOR = 0.82;
 var TOP_WIDTH_DIMENSION_GAP = 35;
 var WEB_THICKNESS_DIMENSION_Y_OFFSET = 4;
+var ANGLE_SECTION_ORIGIN_Y_SHIFT = 24;
 
 var PROPERTY_LABELS = ['title', 'Dead Load: ', 'Area: ', 'Ix: ', 'Sx: ', 'rx: ', 'Zx: ', 'Iy: ', 'Sy: ', 'ry: ', 'Zy: ', 'J: ', 'Cw: '];
 var PROPERTY_X_LAYOUT = [0, PROPERTY_X_COL_1, PROPERTY_X_COL_1, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_1, PROPERTY_X_COL_1];
@@ -911,9 +912,9 @@ function drawAngleDimensions(){
 	var sectionLeftOffset = getSectionLeftOffset(sectionType, b);
 	var sectionRightOffset = getSectionRightOffset(sectionType, b);
 	var legThickness = isFinite(t) && t > 0 ? t : w;
-	var widthDimensionY = Y0 - TOP_WIDTH_DIMENSION_GAP;
-	var leftDepthDimensionX = X0 + sectionLeftOffset*SCALE - 2*aOff - LEFT_DEPTH_DIMENSION_EXTRA_OFFSET;
 	var sectionBottomY = Y0 + d*SCALE;
+	var widthDimensionY = sectionBottomY + TOP_WIDTH_DIMENSION_GAP;
+	var leftDepthDimensionX = X0 + sectionLeftOffset*SCALE - 2*aOff - LEFT_DEPTH_DIMENSION_EXTRA_OFFSET;
 	var leftLegLeftX = X0 + sectionLeftOffset*SCALE;
 	var leftLegRightX;
 	var x1;
@@ -929,16 +930,16 @@ function drawAngleDimensions(){
 	legThickness = Math.min(legThickness, b, d);
 	leftLegRightX = leftLegLeftX + legThickness*SCALE;
 
-	// 'b' (leg length) dimension at the top.
+	// 'b' (leg length) dimension at the bottom.
 	x1 = X0 + sectionLeftOffset*SCALE;
 	y1 = widthDimensionY;
 	x2 = X0 + sectionRightOffset*SCALE;
 	y2 = y1;
 	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
-	drawOneLine(x1, Y0 - lOff, x1, widthDimensionY - lOff);
-	drawOneLine(x2, Y0 - lOff, x2, widthDimensionY - lOff);
+	drawOneLine(x1, sectionBottomY + lOff, x1, widthDimensionY + lOff);
+	drawOneLine(x2, sectionBottomY + lOff, x2, widthDimensionY + lOff);
 	tx = X0;
-	ty = widthDimensionY - 4;
+	ty = widthDimensionY + 15;
 	writeOneText('400', '15', 'Roboto', 'center', '#484848', formatDimensionValue(b), tx, ty);
 
 	// 'd' (leg length) dimension on the left.
@@ -1715,6 +1716,15 @@ function isAngleSectionType(type){
 }
 
 
+function getSectionOriginYForType(type){
+	if (isAngleSectionType(type) === true){
+		return SECTION_ORIGIN_Y - ANGLE_SECTION_ORIGIN_Y_SHIFT;
+	}
+
+	return SECTION_ORIGIN_Y;
+}
+
+
 function isPipeSectionType(type){
 	var filterType = mapRawSectionTypeToFilterType(type);
 
@@ -1855,6 +1865,7 @@ function setCoordDimsAndScale(){
 	var sectionModel = buildSectionModel(shapeRow);
 	applySectionModel(sectionModel);
 	setPropertyValues(shapeRow);
+	Y0 = getSectionOriginYForType(sectionModel.sectionType);
 
 	SCALE = getCurrentScale();
 	var profile = buildBeamGeometry(sectionModel, SCALE);
