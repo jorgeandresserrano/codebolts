@@ -109,7 +109,7 @@ var SECTION_TYPE_FILTER_MAP = {
 	S: 'S',
 	SC: 'S',
 	TFB: 'S',
-	SLB: 'S',
+	SLB: 'SLB',
 	L: 'L',
 	'L E': 'L',
 	'L U': 'L',
@@ -1859,11 +1859,7 @@ function drawCanvas(){
 
 
 function getRowSectionType(row){
-	var normalizedName;
-	var normalizedNameNoSpaces;
-	var prefixedTypeMatch;
 	var explicitType;
-	var rowName;
 
 	if (!row){
 		return '';
@@ -1874,19 +1870,7 @@ function getRowSectionType(row){
 		return explicitType.toUpperCase();
 	}
 
-	rowName = firstNonEmptyString([row.name, row.Name]);
-	if (!rowName){
-		return '';
-	}
-
-	normalizedName = rowName.toUpperCase();
-	normalizedNameNoSpaces = normalizedName.replace(/\s+/g, '');
-
-	prefixedTypeMatch = normalizedNameNoSpaces.match(/^([0-9]*[A-Z]+)/);
-	if (prefixedTypeMatch && prefixedTypeMatch[1]){
-		return prefixedTypeMatch[1];
-	}
-
+	// Filtering is strictly Type-driven; do not infer type from the section name.
 	return '';
 }
 
