@@ -274,6 +274,13 @@ function mapRawSectionTypeToFilterType(rawType){
 }
 
 
+function isPipeRawType(rawType){
+	var normalizedRawType = String(rawType || '').toUpperCase();
+
+	return normalizedRawType === 'PIPE' || normalizedRawType === 'PIP';
+}
+
+
 function isDoubleMcSectionRow(row){
 	var rowType;
 	var rowName;
@@ -667,7 +674,7 @@ function drawBeam(){
 		flangeTipThickness: flangeTipThickness
 	}, SCALE);
 
-	if (isHssSectionType(sectionType) === true){
+	if (isHssSectionType(sectionType) === true || isPipeSectionType(sectionType) === true){
 		drawHssSection();
 		return;
 	}
@@ -836,6 +843,7 @@ function drawHssDimensions(){
 	var which = 3;
 	var angle = Math.PI/8;
 	var dist = 12;
+	var isCircular = isCircularHssType(sectionType) === true;
 	var aOff = DIMENSION_ANCHOR_OFFSET;
 	var lOff = DIMENSION_TICK_OFFSET;
 	var sectionLeftOffset = getSectionLeftOffset(sectionType, b);
@@ -843,7 +851,7 @@ function drawHssDimensions(){
 	var wallThickness = getClosedSectionWallThickness();
 	var widthDimensionY = Y0 - TOP_WIDTH_DIMENSION_GAP;
 	var leftDepthDimensionX = X0 + sectionLeftOffset*SCALE - 2*aOff - LEFT_DEPTH_DIMENSION_EXTRA_OFFSET;
-	var wallThicknessDimensionY = isCircularHssType(sectionType) === true ? (Y0 + d*SCALE*0.5) : (Y0 + d*SCALE*0.35);
+	var wallThicknessDimensionY = isCircular === true ? (Y0 + d*SCALE*0.5) : (Y0 + d*SCALE*0.35);
 	var outerRightWallX = X0 + sectionRightOffset*SCALE;
 	var innerRightWallX = outerRightWallX - wallThickness*SCALE;
 	var x1;
@@ -865,17 +873,19 @@ function drawHssDimensions(){
 	ty = widthDimensionY - 4;
 	writeOneText('400', '15', 'Roboto', 'center', '#484848', formatDimensionValue(b), tx, ty);
 
-	// 'd' dimension arrow.
-	x1 = leftDepthDimensionX;
-	y1 = Y0;
-	x2 = x1;
-	y2 = Y0 + d*SCALE;
-	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
-	drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y1, leftDepthDimensionX - lOff, y1);
-	drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y2, leftDepthDimensionX - lOff, y2);
-	tx = leftDepthDimensionX - 5;
-	ty = Y0 + d/2*SCALE + 15/2;
-	writeOneText('400', '15', 'Roboto', 'right', '#484848', formatDimensionValue(d), tx, ty);
+	if (isCircular !== true){
+		// 'd' dimension arrow.
+		x1 = leftDepthDimensionX;
+		y1 = Y0;
+		x2 = x1;
+		y2 = Y0 + d*SCALE;
+		drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
+		drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y1, leftDepthDimensionX - lOff, y1);
+		drawOneLine(X0 + sectionLeftOffset*SCALE - lOff, y2, leftDepthDimensionX - lOff, y2);
+		tx = leftDepthDimensionX - 5;
+		ty = Y0 + d/2*SCALE + 15/2;
+		writeOneText('400', '15', 'Roboto', 'right', '#484848', formatDimensionValue(d), tx, ty);
+	}
 
 	// 't' wall thickness shown like beam web thickness: opposing horizontal arrows.
 	y1 = wallThicknessDimensionY;
@@ -958,7 +968,7 @@ function drawAngleDimensions(){
 
 
 function drawDimensions(){
-	if (isHssSectionType(sectionType) === true){
+	if (isHssSectionType(sectionType) === true || isPipeSectionType(sectionType) === true){
 		drawHssDimensions();
 		return;
 	}
@@ -1199,13 +1209,21 @@ function normalizeLegacyShapeRow(row){
 	var areaValue = firstFiniteNumber([row.a]);
 	var ixValue = firstFiniteNumber([row.ix]);
 	var iyValue = firstFiniteNumber([row.iy]);
+	var explicitType = firstNonEmptyString([row.type, row.Type]);
+	var depth = firstFiniteNumber([row.d, row.D]);
+	var width = firstFiniteNumber([row.b, row.Bf1, row.Bf2]);
+
+	if (!isFinite(width) && isPipeRawType(explicitType) === true){
+		// PIPE/PIP rows usually store only diameter (D). Use D as width for rendering/filtering.
+		width = depth;
+	}
 
 	normalized.name = firstNonEmptyString([row.name, row.Name]);
-	normalized.type = firstNonEmptyString([row.type, row.Type]);
+	normalized.type = explicitType;
 	normalized.mass = firstFiniteNumber([row.mass, row.mu]);
 	normalized.a = areaValue;
-	normalized.d = firstFiniteNumber([row.d, row.D]);
-	normalized.b = firstFiniteNumber([row.b, row.Bf1, row.Bf2]);
+	normalized.d = depth;
+	normalized.b = width;
 	normalized.w = firstFiniteNumber([row.w, row.tw, row.t, row.tf1, row.tf2]);
 	normalized.t = firstFiniteNumber([row.t, row.tf1, row.tf2]);
 	normalized.k = firstFiniteNumber([row.k]);
@@ -1230,9 +1248,12 @@ function normalizeLegacyShapeRow(row){
 
 function normalizeWorkbookShapeRow(row){
 	var normalized = {};
+	var explicitType = firstNonEmptyString([row.Type, row.type]);
 	var flangeThickness = firstFiniteNumber([row.tf1, row.tf2]);
 	var webThickness = firstFiniteNumber([row.tw, flangeThickness]);
 	var rootRadius = firstFiniteNumber([row.Rf]);
+	var depth = firstFiniteNumber([row.D, row.d]);
+	var width = firstFiniteNumber([row.Bf1, row.Bf2, row.b]);
 	var kValue = firstFiniteNumber([
 		row.k,
 		flangeThickness + rootRadius,
@@ -1247,12 +1268,17 @@ function normalizeWorkbookShapeRow(row){
 	var ixValue = firstFiniteNumber([row.Ix, row.ix]);
 	var iyValue = firstFiniteNumber([row.Iy, row.iy]);
 
+	if (!isFinite(width) && isPipeRawType(explicitType) === true){
+		// PIPE/PIP rows usually store only diameter (D). Use D as width for rendering/filtering.
+		width = depth;
+	}
+
 	normalized.name = firstNonEmptyString([row.Name, row.name]);
-	normalized.type = firstNonEmptyString([row.Type, row.type]);
+	normalized.type = explicitType;
 	normalized.mass = firstFiniteNumber([row.mu, row.mass]);
 	normalized.a = areaValue;
-	normalized.d = firstFiniteNumber([row.D, row.d]);
-	normalized.b = firstFiniteNumber([row.Bf1, row.Bf2, row.b]);
+	normalized.d = depth;
+	normalized.b = width;
 	normalized.w = webThickness;
 	normalized.t = flangeThickness;
 	normalized.k = kValue;
@@ -1676,7 +1702,9 @@ function isCircularHssType(type){
 		rawType === 'HSS C A500' ||
 		rawType === 'CHS' ||
 		rawType === 'CHS C250' ||
-		rawType === 'CHS C350';
+		rawType === 'CHS C350' ||
+		rawType === 'PIPE' ||
+		rawType === 'PIP';
 }
 
 
@@ -1684,6 +1712,13 @@ function isAngleSectionType(type){
 	var filterType = mapRawSectionTypeToFilterType(type);
 
 	return filterType === 'L';
+}
+
+
+function isPipeSectionType(type){
+	var filterType = mapRawSectionTypeToFilterType(type);
+
+	return filterType === 'PIPE';
 }
 
 
