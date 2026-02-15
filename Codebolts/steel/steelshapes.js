@@ -280,6 +280,18 @@ function mapRawSectionTypeToFilterType(rawType, shapeSetKey){
 	if (effectiveShapeSetKey === 'britishShapes' && (normalizedRawType === 'CHS' || normalizedRawType === 'RHS' || normalizedRawType === 'SHS')){
 		return normalizedRawType;
 	}
+	// Canada/USA HSS families must be split into CHS/RHS/SHS tabs.
+	if (effectiveShapeSetKey === 'canadianShapes' || effectiveShapeSetKey === 'americanShapes'){
+		if (normalizedRawType === 'HSS C' || normalizedRawType === 'HSS C A500'){
+			return 'CHS';
+		}
+		if (normalizedRawType === 'HSS R' || normalizedRawType === 'HSS R A500'){
+			return 'RHS';
+		}
+		if (normalizedRawType === 'HSS S' || normalizedRawType === 'HSS S A500'){
+			return 'SHS';
+		}
+	}
 	// Australian families should be shown per local designation (no bundled tabs).
 	if (effectiveShapeSetKey === 'australianShapes'){
 		if (normalizedRawType === 'UB' || normalizedRawType === 'UC' || normalizedRawType === 'WB' || normalizedRawType === 'WC' || normalizedRawType === 'UBP'){
@@ -1071,6 +1083,10 @@ function drawHssDimensions(){
 	var wallThicknessDimensionY = isCircular === true ? (Y0 + d*SCALE*0.5) : (Y0 + d*SCALE*0.35);
 	var outerRightWallX = X0 + sectionRightOffset*SCALE;
 	var innerRightWallX = outerRightWallX - wallThickness*SCALE;
+	var circularWidthWitnessInset = Math.max(18, d*SCALE*0.30);
+	var circularWidthWitnessStartY = Math.min(Y0 + d*SCALE*0.5 - 10, Y0 + circularWidthWitnessInset);
+	var widthWitnessStartY = isCircular === true ? circularWidthWitnessStartY : (Y0 - lOff);
+	var widthWitnessEndY = widthDimensionY - lOff;
 	var x1;
 	var y1;
 	var x2;
@@ -1084,8 +1100,8 @@ function drawHssDimensions(){
 	x2 = X0 + sectionRightOffset*SCALE;
 	y2 = y1;
 	drawArrow(context, x1, y1, x2, y2, style, which, angle, dist);
-	drawOneLine(x1, Y0 - lOff, x1, widthDimensionY - lOff);
-	drawOneLine(x2, Y0 - lOff, x2, widthDimensionY - lOff);
+	drawOneLine(x1, widthWitnessStartY, x1, widthWitnessEndY);
+	drawOneLine(x2, widthWitnessStartY, x2, widthWitnessEndY);
 	tx = X0;
 	ty = widthDimensionY - 4;
 	writeOneText('400', '15', 'Roboto', 'center', '#484848', formatDimensionValue(b), tx, ty);
@@ -1234,6 +1250,7 @@ function drawDimensions(){
 	var rightDimensionTextX = rightDimensionX + RIGHT_DIMENSION_TEXT_OFFSET;
 	var thicknessReferenceX = X0 + thicknessReferenceXOffset*SCALE;
 	var rightWitnessStartX = Math.max(thicknessReferenceX, rightSectionFaceX + rightWitnessObjectGap);
+	var rightFreeDepthBottomWitnessStartX = isTeeSection ? (X0 + webRightOffset*SCALE + rightWitnessObjectGap) : rightWitnessStartX;
 	
 	// 'b' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -1331,7 +1348,7 @@ function drawDimensions(){
 	x2 = x1;
 	y2 = freeDepthBottomY;
 	drawArrow (context,x1,y1,x2,y2,style,which,angle,dist);
-	x1 = rightWitnessStartX;
+	x1 = rightFreeDepthBottomWitnessStartX;
 	x2 = rightDimensionTickX;
 	drawOneLine(x1,y2,x2,y2);
 	tx = rightDimensionTextX;
@@ -2454,6 +2471,7 @@ function getRowSectionType(row){
 function getAvailableSectionTypes(rows){
 	var seen = {};
 	var availableTypes = [];
+	var orderedTypes = SECTION_TYPE_FILTER_ORDER;
 	var i;
 
 	for (i = 0; i < rows.length; i++){
@@ -2469,8 +2487,21 @@ function getAvailableSectionTypes(rows){
 		seen[type] = true;
 	}
 
-	for (i = 0; i < SECTION_TYPE_FILTER_ORDER.length; i++){
-		var orderedType = SECTION_TYPE_FILTER_ORDER[i];
+	if (currentShapeSetKey === 'canadianShapes' || currentShapeSetKey === 'americanShapes'){
+		var rhsIndex;
+		var shsIndex;
+
+		orderedTypes = SECTION_TYPE_FILTER_ORDER.slice(0);
+		rhsIndex = orderedTypes.indexOf('RHS');
+		shsIndex = orderedTypes.indexOf('SHS');
+		if (rhsIndex >= 0 && shsIndex >= 0 && rhsIndex < shsIndex){
+			orderedTypes[rhsIndex] = 'SHS';
+			orderedTypes[shsIndex] = 'RHS';
+		}
+	}
+
+	for (i = 0; i < orderedTypes.length; i++){
+		var orderedType = orderedTypes[i];
 		if (seen[orderedType] === true){
 			availableTypes.push(orderedType);
 		}
@@ -2504,6 +2535,18 @@ function getActiveSectionType(rows){
 
 
 function getSectionTypeFilterDisplayLabel(type){
+	if (currentShapeSetKey === 'canadianShapes' || currentShapeSetKey === 'americanShapes'){
+		if (type === 'CHS'){
+			return 'HSS c';
+		}
+		if (type === 'SHS'){
+			return 'HSS s';
+		}
+		if (type === 'RHS'){
+			return 'HSS r';
+		}
+	}
+
 	if (type === 'LE'){
 		if (currentShapeSetKey === 'britishShapes' || currentShapeSetKey === 'australianShapes'){
 			return 'EA';
