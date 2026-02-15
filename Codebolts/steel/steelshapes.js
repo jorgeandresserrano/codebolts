@@ -370,9 +370,38 @@ function isDoubleCSectionRow(row){
 }
 
 
+function isNorthAmericanHssShapeSet(shapeSetKey){
+	return shapeSetKey === 'canadianShapes' || shapeSetKey === 'americanShapes';
+}
+
+
+function isSquareNorthAmericanHssRow(row){
+	var rowType = getRowSectionType(row);
+	var normalizedRowType = String(rowType || '').toUpperCase();
+	var depth = toNumber(row && row.d);
+	var width = toNumber(row && row.b);
+
+	if (normalizedRowType !== 'HSS R' && normalizedRowType !== 'HSS R A500'){
+		return false;
+	}
+
+	if (!isFinite(depth) || !isFinite(width)){
+		return false;
+	}
+
+	return Math.abs(depth - width) < 1e-6;
+}
+
+
 function getFilterSectionType(row, shapeSetKey){
 	var rawType = getRowSectionType(row);
-	var filterType = mapRawSectionTypeToFilterType(rawType, shapeSetKey);
+	var effectiveShapeSetKey = shapeSetKey || currentShapeSetKey;
+	var filterType = mapRawSectionTypeToFilterType(rawType, effectiveShapeSetKey);
+
+	// In USA datasets many square HSS rows are typed as "HSS r"; split by geometry (d == b).
+	if (isNorthAmericanHssShapeSet(effectiveShapeSetKey) && filterType === 'RHS' && isSquareNorthAmericanHssRow(row) === true){
+		filterType = 'SHS';
+	}
 
 	// Double-channel built-up sections (2MC...) are intentionally excluded from the MC list.
 	if (filterType === 'MC' && isDoubleMcSectionRow(row) === true){
@@ -920,7 +949,7 @@ function writePropAndTitle(){
 	var x = canv.width / 2;
 	var y = TITLE_Y;
 	
-	writeOneText('700', '30', 'Roboto', 'center', '#2B2B2B', beamName, x, y);
+	writeOneText('700', '30', 'Roboto', 'center', '#2B2B2B', getDisplayShapeName(beamName), x, y);
 	y = SPEC_Y;
 	writeOneText('400', '10', 'Roboto', 'center', '#484848', currentSourceCreditText, x, y);
 	
@@ -941,6 +970,12 @@ function formatDimensionValue(value){
 		return numericValue.toFixed(1);
 	}
 	return value;
+}
+
+
+function getDisplayShapeName(shapeName){
+	// Keep database keys untouched; only improve readability in UI text.
+	return String(shapeName || '').replace(/([0-9.])X(?=[0-9.\-])/g, '$1x');
 }
 
 
@@ -2655,7 +2690,7 @@ function showList(){
 	$('#list-container').html('');
 	
 	for (var i = 0; i < displayRows.length; i++) {
-		itemsHtml.push("<div id='" + displayRows[i].name + "' class='w' row='" + (i+1) + "'>" + displayRows[i].name + "</div>");
+		itemsHtml.push("<div id='" + displayRows[i].name + "' class='w' row='" + (i+1) + "'>" + getDisplayShapeName(displayRows[i].name) + "</div>");
 	}
 	
 	$('#list-container').append(itemsHtml.join(''));
