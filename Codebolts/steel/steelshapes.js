@@ -69,7 +69,7 @@ var ANGLE_SECTION_ORIGIN_Y_SHIFT = 24;
 var PROPERTY_LABELS = ['title', 'Dead Load: ', 'Area: ', 'Ix: ', 'Sx: ', 'rx: ', 'Zx: ', 'Iy: ', 'Sy: ', 'ry: ', 'Zy: ', 'J: ', 'Cw: '];
 var PROPERTY_X_LAYOUT = [0, PROPERTY_X_COL_1, PROPERTY_X_COL_1, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_1, PROPERTY_X_COL_1];
 var PROPERTY_Y_LAYOUT = [0, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP)];
-var SECTION_TYPE_FILTER_ORDER = ['W', 'M', 'S', 'HP', 'C', 'MC', 'LE', 'LU', 'WT', 'MT', 'ST', 'HSS', 'PIPE'];
+var SECTION_TYPE_FILTER_ORDER = ['W', 'IPE', 'HE', 'IPN', 'M', 'S', 'HL', 'HD', 'HP', 'C', 'UPE', 'UPN', 'MC', 'LE', 'LU', 'HEAT', 'HEBT', 'IPET', 'WT', 'MT', 'ST', 'HSS', 'PIPE'];
 var SECTION_TYPE_FILTER_MAP = {
 	W: 'W',
 	UB: 'W',
@@ -83,20 +83,20 @@ var SECTION_TYPE_FILTER_MAP = {
 	H: 'W',
 	HN: 'W',
 	HW: 'W',
-	HE: 'W',
-	IPE: 'W',
-	IPN: 'W',
+	HE: 'HE',
+	IPE: 'IPE',
+	IPN: 'IPN',
 	I: 'W',
 	VS: 'W',
 	CVS: 'W',
 	M: 'M',
 	HP: 'HP',
-	HD: 'HP',
-	HL: 'HP',
+	HD: 'HD',
+	HL: 'HL',
 	C: 'C',
 	PFC: 'C',
-	UPE: 'C',
-	UPN: 'C',
+	UPE: 'UPE',
+	UPN: 'UPN',
 	PG: 'C',
 	LC: 'C',
 	JC: 'C',
@@ -127,9 +127,9 @@ var SECTION_TYPE_FILTER_MAP = {
 	WT: 'WT',
 	UBT: 'WT',
 	UCT: 'WT',
-	IPET: 'WT',
-	HEBT: 'WT',
-	HEAT: 'WT',
+	IPET: 'IPET',
+	HEBT: 'HEBT',
+	HEAT: 'HEAT',
 	TN: 'WT',
 	TW: 'WT',
 	NT: 'WT',
@@ -356,6 +356,16 @@ function getScaleByExtent(availablePixels, extent){
 }
 
 
+function isTeeFilterType(filterType){
+	return filterType === 'WT' ||
+		filterType === 'HEAT' ||
+		filterType === 'HEBT' ||
+		filterType === 'IPET' ||
+		filterType === 'MT' ||
+		filterType === 'ST';
+}
+
+
 function calculateShapeSetStandardScale(shapeSet){
 	var rows = getNormalizedRows(shapeSet);
 	var maxDepth = 0;
@@ -387,7 +397,7 @@ function calculateShapeSetStandardScale(shapeSet){
 		maxDepth = Math.max(maxDepth, depth);
 		maxWidth = Math.max(maxWidth, width);
 
-		if (filterType === 'WT' || filterType === 'MT' || filterType === 'ST'){
+		if (isTeeFilterType(filterType) === true){
 			maxTeeDepth = Math.max(maxTeeDepth, depth);
 			maxTeeWidth = Math.max(maxTeeWidth, width);
 		}
@@ -396,7 +406,7 @@ function calculateShapeSetStandardScale(shapeSet){
 	// Global fit constraints.
 	var scaleByTallestSection = getScaleByExtent(AVAILABLE_BEAM_HEIGHT_PIXELS, maxDepth);
 	var scaleByWidestSection = getScaleByExtent(AVAILABLE_BEAM_WIDTH_PIXELS, maxWidth);
-	// Explicit tee-family fit constraints (WT/MT/ST): keep both depth and flange width in bounds.
+	// Explicit tee-family fit constraints: keep both depth and flange width in bounds.
 	var scaleByTallestTee = getScaleByExtent(AVAILABLE_BEAM_HEIGHT_PIXELS, maxTeeDepth);
 	var scaleByWidestTee = getScaleByExtent(AVAILABLE_BEAM_WIDTH_PIXELS, maxTeeWidth);
 	var governingScale = Math.min(scaleByTallestSection, scaleByWidestSection, scaleByTallestTee, scaleByWidestTee);
@@ -1425,12 +1435,16 @@ function applySectionModel(model){
 
 
 function isSlopedFlangeSectionType(type){
-	return type === 'S' || type === 'ST' || type === 'C' || type === 'MC';
+	var filterType = mapRawSectionTypeToFilterType(type);
+
+	return filterType === 'S' || filterType === 'ST' || filterType === 'C' || filterType === 'MC' || filterType === 'UPN';
 }
 
 
 function isChannelSectionType(type){
-	return type === 'C' || type === 'MC';
+	var filterType = mapRawSectionTypeToFilterType(type);
+
+	return filterType === 'C' || filterType === 'UPE' || filterType === 'UPN' || filterType === 'MC';
 }
 
 
@@ -1686,7 +1700,7 @@ function buildAngleGeometry(model, scale){
 
 
 function isWideFlangeFamily(type){
-	return type === 'W' || type === 'M' || type === 'MP' || type === 'HP';
+	return type === 'W' || type === 'M' || type === 'MP' || type === 'HP' || type === 'HL' || type === 'HD';
 }
 
 
@@ -1736,7 +1750,7 @@ function isPipeSectionType(type){
 function isTeeSectionType(type){
 	var filterType = mapRawSectionTypeToFilterType(type);
 
-	return filterType === 'WT' || filterType === 'MT' || filterType === 'ST';
+	return isTeeFilterType(filterType) === true;
 }
 
 
@@ -2223,8 +2237,8 @@ function renderSectionTypeFilter(rows){
 	activeType = getActiveSectionType(rows);
 
 	html.push("<div class='section-filter-title'>Section Type</div>");
-	for (i = 0; i < SECTION_TYPE_FILTER_ORDER.length; i++){
-		var type = SECTION_TYPE_FILTER_ORDER[i];
+	for (i = 0; i < availableTypes.length; i++){
+		var type = availableTypes[i];
 		var onClass = (type === activeType) ? ' on' : '';
 		var label = getSectionTypeFilterDisplayLabel(type);
 		html.push("<div class='button section-type" + onClass + "' data-section-type='" + type + "'>" + label + "</div>");
