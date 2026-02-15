@@ -66,9 +66,13 @@ body{
 	top: 454px;
 	left: 20px;
 	z-index: 5;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
-#copy-canvas{
+#copy-canvas,
+#copy-properties{
 	position: relative;
 	min-width: 32px;
 	width: 32px;
@@ -121,41 +125,76 @@ body{
 	background: rgba(255, 255, 255, 0.22);
 }
 
-#copy-canvas:hover{
+.copy-properties-icon{
+	position: relative;
+	display: block;
+	width: 14px;
+	height: 14px;
+	border: 1px solid currentColor;
+	border-radius: 2px;
+	box-sizing: border-box;
+}
+
+.copy-properties-icon::before,
+.copy-properties-icon::after{
+	content: '';
+	position: absolute;
+	left: 2px;
+	right: 2px;
+	border-top: 1px solid currentColor;
+}
+
+.copy-properties-icon::before{
+	top: 4px;
+}
+
+.copy-properties-icon::after{
+	top: 8px;
+}
+
+#copy-canvas:hover,
+#copy-properties:hover{
 	background: rgba(255, 255, 255, 0.34);
 	border-color: rgba(255, 255, 255, 0.58);
 }
 
-#copy-canvas:active{
+#copy-canvas:active,
+#copy-properties:active{
 	transform: translateY(1px);
 }
 
-#copy-canvas:focus{
+#copy-canvas:focus,
+#copy-properties:focus{
 	outline: none;
 }
 
-#copy-canvas:focus-visible{
+#copy-canvas:focus-visible,
+#copy-properties:focus-visible{
 	border-color: rgba(230, 64, 22, 0.5);
 	box-shadow: 0 0 0 2px rgba(230, 64, 22, 0.14);
 }
 
-#copy-canvas.is-busy{
+#copy-canvas.is-busy,
+#copy-properties.is-busy{
 	cursor: progress;
 }
 
-#copy-canvas.is-success{
+#copy-canvas.is-success,
+#copy-properties.is-success{
 	color: #2F7D32;
 	background: rgba(255, 255, 255, 0.45);
 	border-color: rgba(47, 125, 50, 0.3);
 }
 
-#copy-canvas.is-error{
+#copy-canvas.is-error,
+#copy-properties.is-error{
 	color: #A94442;
 	background: rgba(255, 255, 255, 0.45);
 	border-color: rgba(169, 68, 66, 0.32);
 }
 
-#copy-canvas::after{
+#copy-canvas::after,
+#copy-properties::after{
 	content: attr(data-tooltip);
 	position: absolute;
 	top: calc(100% + 8px);
@@ -176,17 +215,22 @@ body{
 }
 
 #copy-canvas:hover::after,
+#copy-properties:hover::after,
 #copy-canvas:focus-visible::after,
-#copy-canvas.show-tooltip::after{
+#copy-properties:focus-visible::after,
+#copy-canvas.show-tooltip::after,
+#copy-properties.show-tooltip::after{
 	opacity: 1;
 	transform: translateY(0);
 }
 
-#copy-canvas.is-success::after{
+#copy-canvas.is-success::after,
+#copy-properties.is-success::after{
 	background: rgba(47, 125, 50, 0.9);
 }
 
-#copy-canvas.is-error::after{
+#copy-canvas.is-error::after,
+#copy-properties.is-error::after{
 	background: rgba(169, 68, 66, 0.9);
 }
 

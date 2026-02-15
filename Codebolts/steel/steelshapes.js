@@ -27,7 +27,7 @@ var currentShapes, canadianShapes, americanShapes, europeanShapes, britishShapes
 	beamCoordinates,
 	beamName,
 	xArray,	yArray,
-	currentShapeSetKey, selectedBeamByShapeSet, listScrollTopByShapeSet, selectedSectionTypeByShapeSet, standardScaleBySectionTypeByShapeSet, canvasCopyFeedbackTimeoutId;
+	currentShapeSetKey, selectedBeamByShapeSet, listScrollTopByShapeSet, selectedSectionTypeByShapeSet, standardScaleBySectionTypeByShapeSet, canvasCopyFeedbackTimeoutId, propertyCopyFeedbackTimeoutId;
 
 // Current section dimensions.
 var b, d, t, w, k, k1, rf, rtoe, sectionType, flangeTipThickness, flangeWebThickness, flangeThicknessReferenceXOffset;
@@ -618,6 +618,181 @@ function formatPropertyValue(index, value){
 }
 
 
+function getUnitsWithoutScalePrefix(unitLabel){
+	return String(unitLabel || '').replace(/^x10(?:\^[0-9]+)?\s*/i, '').trim();
+}
+
+
+function getUnitScaleExponent(unitLabel){
+	var unitMatch = String(unitLabel || '').match(/^x10(?:\^([0-9]+))?\b/i);
+	var exponent;
+
+	if (!unitMatch){
+		return 0;
+	}
+
+	exponent = unitMatch[1] ? parseInt(unitMatch[1], 10) : 1;
+	if (!isFinite(exponent)){
+		return 0;
+	}
+
+	return exponent;
+}
+
+
+function getClipboardPropertyValueAndUnit(index, values, units){
+	var scaledDisplayValue = scalePropertyValueForDisplay(index, values[index], units);
+	var formattedScaledValue = formatPropertyValue(index, scaledDisplayValue);
+	var scaledNumericValue = parseFloat(formattedScaledValue);
+	var unitLabelWithoutScale = getUnitsWithoutScalePrefix(units[index]);
+	var scaleExponent = getUnitScaleExponent(units[index]);
+	var scaleMultiplier = Math.pow(10, scaleExponent);
+	var decimalMatch;
+	var scaledDecimalPlaces;
+	var baseDecimalPlaces;
+	var baseNumericValue;
+
+	if (formattedScaledValue === 'N/A' || !isFinite(scaledNumericValue)){
+		return {
+			value: 'N/A',
+			unit: unitLabelWithoutScale
+		};
+	}
+
+	decimalMatch = String(formattedScaledValue).match(/\.(\d+)$/);
+	scaledDecimalPlaces = decimalMatch ? decimalMatch[1].length : 0;
+	baseDecimalPlaces = Math.max(0, scaledDecimalPlaces - scaleExponent);
+	baseNumericValue = normalizeDisplayNumericValue(scaledNumericValue * scaleMultiplier);
+
+	return {
+		value: (baseDecimalPlaces > 0) ? Number(baseNumericValue).toFixed(baseDecimalPlaces) : String(baseNumericValue),
+		unit: unitLabelWithoutScale
+	};
+}
+
+
+function getClipboardDimensionValueAndUnit(value, unitLabel){
+	if (!isFinite(value)){
+		return {
+			value: 'N/A',
+			unit: unitLabel
+		};
+	}
+
+	return {
+		value: formatDimensionValue(value),
+		unit: unitLabel
+	};
+}
+
+
+function buildClipboardRow(label, value, unit){
+	return [String(label), String(value), String(unit || '')];
+}
+
+
+function getPropertiesClipboardRows(){
+	var values = getPropertyValues();
+	var units = getPropertyUnitsForSpec();
+	var lengthUnit = getUnitsWithoutScalePrefix(units[5]);
+	var deadLoad = getClipboardPropertyValueAndUnit(1, values, units);
+	var areaProperty = getClipboardPropertyValueAndUnit(2, values, units);
+	var ixProperty = getClipboardPropertyValueAndUnit(3, values, units);
+	var sxProperty = getClipboardPropertyValueAndUnit(4, values, units);
+	var rxProperty = getClipboardPropertyValueAndUnit(5, values, units);
+	var zxProperty = getClipboardPropertyValueAndUnit(6, values, units);
+	var iyProperty = getClipboardPropertyValueAndUnit(7, values, units);
+	var syProperty = getClipboardPropertyValueAndUnit(8, values, units);
+	var ryProperty = getClipboardPropertyValueAndUnit(9, values, units);
+	var zyProperty = getClipboardPropertyValueAndUnit(10, values, units);
+	var jProperty = getClipboardPropertyValueAndUnit(11, values, units);
+	var cwProperty = getClipboardPropertyValueAndUnit(12, values, units);
+	var depthDimension = getClipboardDimensionValueAndUnit(d, lengthUnit);
+	var widthDimension = getClipboardDimensionValueAndUnit(b, lengthUnit);
+	var flangeThicknessDimension = getClipboardDimensionValueAndUnit(t, lengthUnit);
+	var webThicknessDimension = getClipboardDimensionValueAndUnit(w, lengthUnit);
+	var rows = [];
+
+	rows.push(buildClipboardRow('Shape', beamName || 'N/A', ''));
+	rows.push(buildClipboardRow('Type', sectionType || 'N/A', ''));
+	rows.push(buildClipboardRow('Spec', currentSpecName || 'N/A', ''));
+	rows.push(buildClipboardRow('Dead Load', deadLoad.value, deadLoad.unit));
+	rows.push(buildClipboardRow('Area', areaProperty.value, areaProperty.unit));
+	rows.push(buildClipboardRow('Ix', ixProperty.value, ixProperty.unit));
+	rows.push(buildClipboardRow('Sx', sxProperty.value, sxProperty.unit));
+	rows.push(buildClipboardRow('rx', rxProperty.value, rxProperty.unit));
+	rows.push(buildClipboardRow('Zx', zxProperty.value, zxProperty.unit));
+	rows.push(buildClipboardRow('Iy', iyProperty.value, iyProperty.unit));
+	rows.push(buildClipboardRow('Sy', syProperty.value, syProperty.unit));
+	rows.push(buildClipboardRow('ry', ryProperty.value, ryProperty.unit));
+	rows.push(buildClipboardRow('Zy', zyProperty.value, zyProperty.unit));
+	rows.push(buildClipboardRow('J', jProperty.value, jProperty.unit));
+	rows.push(buildClipboardRow('Cw', cwProperty.value, cwProperty.unit));
+	rows.push(buildClipboardRow('d', depthDimension.value, depthDimension.unit));
+	rows.push(buildClipboardRow('b', widthDimension.value, widthDimension.unit));
+	rows.push(buildClipboardRow('tf', flangeThicknessDimension.value, flangeThicknessDimension.unit));
+	rows.push(buildClipboardRow('tw', webThicknessDimension.value, webThicknessDimension.unit));
+
+	return rows;
+}
+
+
+function getPropertiesClipboardText(){
+	var rows = getPropertiesClipboardRows();
+	var textLines = [];
+
+	for (var i = 0; i < rows.length; i++){
+		textLines.push(rows[i].join('\t'));
+	}
+
+	return textLines.join('\n');
+}
+
+
+function copyTextToClipboard(text){
+	return new Promise(function(resolve, reject){
+		if (!text){
+			reject(new Error('No text to copy.'));
+			return;
+		}
+
+		if (navigator.clipboard && navigator.clipboard.writeText){
+			navigator.clipboard.writeText(text).then(function(){
+				resolve();
+			}, function(error){
+				reject(error || new Error('Clipboard write failed.'));
+			});
+			return;
+		}
+
+		var textArea = document.createElement('textarea');
+		textArea.value = text;
+		textArea.setAttribute('readonly', '');
+		textArea.style.position = 'fixed';
+		textArea.style.top = '-9999px';
+		textArea.style.left = '-9999px';
+		document.body.appendChild(textArea);
+		textArea.select();
+		textArea.setSelectionRange(0, text.length);
+
+		try {
+			if (document.execCommand('copy')){
+				resolve();
+			}
+			else {
+				reject(new Error('Clipboard text copy is not supported in this browser/context.'));
+			}
+		}
+		catch (error) {
+			reject(error || new Error('Clipboard text copy failed.'));
+		}
+		finally {
+			document.body.removeChild(textArea);
+		}
+	});
+}
+
+
 function initializeVariables(){
 	
 	CANADIAN_SPEC_NAME = 'CISC Section Tables_SST92';
@@ -682,6 +857,7 @@ function initializeVariables(){
 	zoom = true;
 	showDimensions = true;
 	canvasCopyFeedbackTimeoutId = null;
+	propertyCopyFeedbackTimeoutId = null;
 }
 
 
@@ -2020,6 +2196,44 @@ function setCanvasCopyFeedback(message, statusClass){
 }
 
 
+function setPropertiesCopyFeedback(message, statusClass){
+	var button = $('#copy-properties');
+	var defaultTooltipMessage = 'Copy section properties to clipboard';
+
+	if (propertyCopyFeedbackTimeoutId){
+		window.clearTimeout(propertyCopyFeedbackTimeoutId);
+		propertyCopyFeedbackTimeoutId = null;
+	}
+
+	button.removeClass('is-success is-error show-tooltip');
+	button.attr('data-tooltip', defaultTooltipMessage);
+
+	if (!message){
+		return;
+	}
+
+	button.attr('data-tooltip', message);
+	button.addClass('show-tooltip');
+
+	if (statusClass === 'success'){
+		button.addClass('is-success');
+	}
+	if (statusClass === 'error'){
+		button.addClass('is-error');
+	}
+
+	if (statusClass !== 'success' && statusClass !== 'error'){
+		return;
+	}
+
+	propertyCopyFeedbackTimeoutId = window.setTimeout(function(){
+		button.removeClass('is-success is-error show-tooltip');
+		button.attr('data-tooltip', defaultTooltipMessage);
+		propertyCopyFeedbackTimeoutId = null;
+	}, 1800);
+}
+
+
 function copyCanvasImageToClipboard(canvasElement){
 	return new Promise(function(resolve, reject){
 		if (!canvasElement){
@@ -2076,8 +2290,39 @@ function setCanvasCopyListener(){
 }
 
 
+function setPropertiesCopyListener(){
+	var copyButton = $('#copy-properties');
+
+	if (copyButton.length === 0){
+		return;
+	}
+
+	copyButton.off('click.steel').on('click.steel', function(){
+		var button = $(this);
+		var clipboardText;
+
+		if (button.hasClass('is-busy')){
+			return;
+		}
+
+		clipboardText = getPropertiesClipboardText();
+		button.addClass('is-busy');
+		setPropertiesCopyFeedback('Copying properties...', '');
+
+		copyTextToClipboard(clipboardText).then(function(){
+			button.removeClass('is-busy');
+			setPropertiesCopyFeedback('Properties copied to clipboard.', 'success');
+		}, function(){
+			button.removeClass('is-busy');
+			setPropertiesCopyFeedback('Clipboard blocked property copy in this browser/context.', 'error');
+		});
+	});
+}
+
+
 function setMostListeners(){
 	setCanvasCopyListener();
+	setPropertiesCopyListener();
 
 	$('#list-container').on('scroll', function() {
 		listScrollTopByShapeSet[currentShapeSetKey] = this.scrollTop;
