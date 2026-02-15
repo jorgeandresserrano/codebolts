@@ -14,7 +14,7 @@ var X0,
 	Y0,
 	AVAILABLE_BEAM_HEIGHT_PIXELS, AVAILABLE_BEAM_WIDTH_PIXELS,
 	standardScale, STD_CANADIAN_SCALE, STD_AMERICAN_SCALE, STD_EUROPEAN_SCALE, STD_BRITISH_SCALE,
-	STD_AUSTRALIAN_SCALE, STD_INDIAN_SCALE, STD_BRAZILIAN_SCALE, STD_CHINESE_SCALE, STD_SOUTH_AFRICAN_SCALE,
+	STD_AUSTRALIAN_SCALE, STD_CHINESE_SCALE,
 	SCALE,
 	LINE_WIDTH,
 	LINE_COLOR,
@@ -23,7 +23,7 @@ var X0,
 	context;
 
 // Shapes data and selected shape state.
-var currentShapes, canadianShapes, americanShapes, europeanShapes, britishShapes, australianShapes, indianShapes, brazilianShapes, chineseShapes, southAfricanShapes,
+var currentShapes, canadianShapes, americanShapes, europeanShapes, britishShapes, australianShapes, chineseShapes,
 	beamCoordinates,
 	beamName,
 	xArray,	yArray,
@@ -39,10 +39,9 @@ var mass, area,	ix,	sx,	rx,	zx,	iy,	sy,	ry,	zy, j, cw;
 var zoom, showDimensions,
 	currentSpecName, currentSourceCreditText,
 	CANADIAN_SPEC_NAME, AMERICAN_SPEC_NAME, EUROPEAN_SPEC_NAME, BRITISH_SPEC_NAME,
-	AUSTRALIAN_SPEC_NAME, INDIAN_SPEC_NAME, BRAZILIAN_SPEC_NAME, CHINESE_SPEC_NAME, SOUTH_AFRICAN_SPEC_NAME,
+	AUSTRALIAN_SPEC_NAME, CHINESE_SPEC_NAME,
 	CANADIAN_SOURCE_CREDIT_TEXT, AMERICAN_SOURCE_CREDIT_TEXT, EUROPEAN_SOURCE_CREDIT_TEXT, BRITISH_SOURCE_CREDIT_TEXT,
-	AUSTRALIAN_SOURCE_CREDIT_TEXT, INDIAN_SOURCE_CREDIT_TEXT, BRAZILIAN_SOURCE_CREDIT_TEXT, CHINESE_SOURCE_CREDIT_TEXT,
-	SOUTH_AFRICAN_SOURCE_CREDIT_TEXT;
+	AUSTRALIAN_SOURCE_CREDIT_TEXT, CHINESE_SOURCE_CREDIT_TEXT;
 
 // Fixed UI layout and drawing constants.
 var CANVAS_WIDTH = 580,
@@ -69,7 +68,7 @@ var ANGLE_SECTION_ORIGIN_Y_SHIFT = 24;
 var PROPERTY_LABELS = ['title', 'Dead Load: ', 'Area: ', 'Ix: ', 'Sx: ', 'rx: ', 'Zx: ', 'Iy: ', 'Sy: ', 'ry: ', 'Zy: ', 'J: ', 'Cw: '];
 var PROPERTY_X_LAYOUT = [0, PROPERTY_X_COL_1, PROPERTY_X_COL_1, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_1, PROPERTY_X_COL_1];
 var PROPERTY_Y_LAYOUT = [0, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP)];
-var SECTION_TYPE_FILTER_ORDER = ['W', 'UB', 'UC', 'IPE', 'HE', 'IPN', 'M', 'S', 'HL', 'HD', 'HP', 'C', 'UPE', 'UPN', 'MC', 'LE', 'LU', 'UBT', 'UCT', 'HEAT', 'HEBT', 'IPET', 'WT', 'MT', 'ST', 'HSS', 'CHS', 'RHS', 'SHS', 'PIPE'];
+var SECTION_TYPE_FILTER_ORDER = ['W', 'UB', 'UC', 'WB', 'WC', 'UBP', 'IPE', 'HE', 'IPN', 'M', 'S', 'TFB', 'HL', 'HD', 'HP', 'C', 'PFC', 'UPE', 'UPN', 'MC', 'LE', 'LU', 'UBT', 'UCT', 'HEAT', 'HEBT', 'IPET', 'WT', 'MT', 'ST', 'HSS', 'CHS', 'RHS', 'SHS', 'PIPE'];
 var SECTION_TYPE_FILTER_MAP = {
 	W: 'W',
 	UB: 'W',
@@ -225,7 +224,7 @@ function getPropertyUnitsForSpec(){
 	if (currentSpecName === EUROPEAN_SPEC_NAME || currentSpecName === BRITISH_SPEC_NAME){
 		return ['', 'kN/m', 'mm^2', 'x10^4 mm^4', 'x10^3 mm^3', 'x10 mm', 'x10^3 mm^3', 'x10^4 mm^4', 'x10^3 mm^3', 'x10 mm', 'x10^3 mm^3', 'x10^4 mm^4', 'x10^9 mm^6'];
 	}
-	// Canada, Australia, India, Brazil, China and South Africa use this metric formatting.
+	// Canada, Australia and China use this metric formatting.
 	return ['', 'kN/m', 'mm^2', 'x10^6 mm^4', 'x10^3 mm^3', 'mm', 'x10^3 mm^3', 'x10^6 mm^4', 'x10^3 mm^3', 'mm', 'x10^3 mm^3', 'x10^3 mm^4', 'x10^9 mm^6'];
 }
 
@@ -237,10 +236,7 @@ function getDefaultSectionTypeSelectionByShapeSet(){
 		europeanShapes: 'W',
 		britishShapes: 'W',
 		australianShapes: 'W',
-		indianShapes: 'W',
-		brazilianShapes: 'W',
-		chineseShapes: 'W',
-		southAfricanShapes: 'W'
+		chineseShapes: 'W'
 	};
 }
 
@@ -252,10 +248,7 @@ function getShapeSetConfig(shapeSetKey){
 		europeanShapes: {dataset: europeanShapes, specName: EUROPEAN_SPEC_NAME, sourceCreditText: EUROPEAN_SOURCE_CREDIT_TEXT, scale: STD_EUROPEAN_SCALE},
 		britishShapes: {dataset: britishShapes, specName: BRITISH_SPEC_NAME, sourceCreditText: BRITISH_SOURCE_CREDIT_TEXT, scale: STD_BRITISH_SCALE},
 		australianShapes: {dataset: australianShapes, specName: AUSTRALIAN_SPEC_NAME, sourceCreditText: AUSTRALIAN_SOURCE_CREDIT_TEXT, scale: STD_AUSTRALIAN_SCALE},
-		indianShapes: {dataset: indianShapes, specName: INDIAN_SPEC_NAME, sourceCreditText: INDIAN_SOURCE_CREDIT_TEXT, scale: STD_INDIAN_SCALE},
-		brazilianShapes: {dataset: brazilianShapes, specName: BRAZILIAN_SPEC_NAME, sourceCreditText: BRAZILIAN_SOURCE_CREDIT_TEXT, scale: STD_BRAZILIAN_SCALE},
-		chineseShapes: {dataset: chineseShapes, specName: CHINESE_SPEC_NAME, sourceCreditText: CHINESE_SOURCE_CREDIT_TEXT, scale: STD_CHINESE_SCALE},
-		southAfricanShapes: {dataset: southAfricanShapes, specName: SOUTH_AFRICAN_SPEC_NAME, sourceCreditText: SOUTH_AFRICAN_SOURCE_CREDIT_TEXT, scale: STD_SOUTH_AFRICAN_SCALE}
+		chineseShapes: {dataset: chineseShapes, specName: CHINESE_SPEC_NAME, sourceCreditText: CHINESE_SOURCE_CREDIT_TEXT, scale: STD_CHINESE_SCALE}
 	};
 
 	return shapeSets[shapeSetKey];
@@ -286,6 +279,24 @@ function mapRawSectionTypeToFilterType(rawType, shapeSetKey){
 	// British CHS/RHS/SHS must be shown as separate hollow-section tabs.
 	if (effectiveShapeSetKey === 'britishShapes' && (normalizedRawType === 'CHS' || normalizedRawType === 'RHS' || normalizedRawType === 'SHS')){
 		return normalizedRawType;
+	}
+	// Australian families should be shown per local designation (no bundled tabs).
+	if (effectiveShapeSetKey === 'australianShapes'){
+		if (normalizedRawType === 'UB' || normalizedRawType === 'UC' || normalizedRawType === 'WB' || normalizedRawType === 'WC' || normalizedRawType === 'UBP'){
+			return normalizedRawType;
+		}
+		if (normalizedRawType === 'PFC' || normalizedRawType === 'TFB' || normalizedRawType === 'UBT' || normalizedRawType === 'UCT'){
+			return normalizedRawType;
+		}
+		if (normalizedRawType === 'CHS' || normalizedRawType === 'CHS C250' || normalizedRawType === 'CHS C350'){
+			return 'CHS';
+		}
+		if (normalizedRawType === 'RHS' || normalizedRawType === 'RHS C350' || normalizedRawType === 'RHS C450'){
+			return 'RHS';
+		}
+		if (normalizedRawType === 'SHS' || normalizedRawType === 'SHS C350' || normalizedRawType === 'SHS C450'){
+			return 'SHS';
+		}
 	}
 
 	return SECTION_TYPE_FILTER_MAP[normalizedRawType] || '';
@@ -614,19 +625,13 @@ function initializeVariables(){
 	EUROPEAN_SPEC_NAME = 'ArcelorMittal Europe 2014_1';
 	BRITISH_SPEC_NAME = 'ArcelorMittal Britain 2014_1';
 	AUSTRALIAN_SPEC_NAME = 'Australia c';
-	INDIAN_SPEC_NAME = 'India c';
-	BRAZILIAN_SPEC_NAME = 'Brazil c';
 	CHINESE_SPEC_NAME = 'China c';
-	SOUTH_AFRICAN_SPEC_NAME = 'South Africa c';
 	CANADIAN_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
 	AMERICAN_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
 	EUROPEAN_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
 	BRITISH_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
 	AUSTRALIAN_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
-	INDIAN_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
-	BRAZILIAN_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
 	CHINESE_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
-	SOUTH_AFRICAN_SOURCE_CREDIT_TEXT = 'Courtesy of HatchTools 2026-Feb-12';
 	currentSpecName = CANADIAN_SPEC_NAME;
 	currentSourceCreditText = CANADIAN_SOURCE_CREDIT_TEXT;
 	currentShapeSetKey = 'canadianShapes';
@@ -650,10 +655,7 @@ function initializeVariables(){
 	STD_EUROPEAN_SCALE = calculateShapeSetStandardScale(europeanShapes, 'europeanShapes');
 	STD_BRITISH_SCALE = calculateShapeSetStandardScale(britishShapes, 'britishShapes');
 	STD_AUSTRALIAN_SCALE = calculateShapeSetStandardScale(australianShapes, 'australianShapes');
-	STD_INDIAN_SCALE = calculateShapeSetStandardScale(indianShapes, 'indianShapes');
-	STD_BRAZILIAN_SCALE = calculateShapeSetStandardScale(brazilianShapes, 'brazilianShapes');
 	STD_CHINESE_SCALE = calculateShapeSetStandardScale(chineseShapes, 'chineseShapes');
-	STD_SOUTH_AFRICAN_SCALE = calculateShapeSetStandardScale(southAfricanShapes, 'southAfricanShapes');
 	// Per-type non-zoom scales (W, M, HP, C, MC, S, WT, MT, ST) are computed
 	// from only the rows available in each displayed type tab.
 	standardScaleBySectionTypeByShapeSet = {
@@ -662,10 +664,7 @@ function initializeVariables(){
 		europeanShapes: calculateShapeSetTypeStandardScales(europeanShapes, 'europeanShapes'),
 		britishShapes: calculateShapeSetTypeStandardScales(britishShapes, 'britishShapes'),
 		australianShapes: calculateShapeSetTypeStandardScales(australianShapes, 'australianShapes'),
-		indianShapes: calculateShapeSetTypeStandardScales(indianShapes, 'indianShapes'),
-		brazilianShapes: calculateShapeSetTypeStandardScales(brazilianShapes, 'brazilianShapes'),
-		chineseShapes: calculateShapeSetTypeStandardScales(chineseShapes, 'chineseShapes'),
-		southAfricanShapes: calculateShapeSetTypeStandardScales(southAfricanShapes, 'southAfricanShapes')
+		chineseShapes: calculateShapeSetTypeStandardScales(chineseShapes, 'chineseShapes')
 	};
 	standardScale = STD_CANADIAN_SCALE;
 	
@@ -1442,7 +1441,7 @@ function buildSectionModel(shapeRow){
 	model.sectionType = getRowSectionType(shapeRow);
 	model.flangeTipThickness = getFlangeTipThickness(model.sectionType, model.b, model.w, model.t);
 	model.flangeWebThickness = getFlangeWebThickness(model.sectionType, model.b, model.w, model.t, model.k);
-	model.flangeThicknessReferenceXOffset = getFlangeThicknessReferenceXOffset(model.sectionType, model.b, model.w);
+	model.flangeThicknessReferenceXOffset = getFlangeThicknessReferenceXOffset(model.sectionType, model.b, model.w, model.t);
 
 	return model;
 }
@@ -1467,14 +1466,19 @@ function applySectionModel(model){
 function isSlopedFlangeSectionType(type){
 	var filterType = mapRawSectionTypeToFilterType(type);
 
-	return filterType === 'S' || filterType === 'ST' || filterType === 'C' || filterType === 'MC' || filterType === 'UPN';
+	return filterType === 'S' ||
+		filterType === 'TFB' ||
+		filterType === 'ST' ||
+		filterType === 'C' ||
+		filterType === 'MC' ||
+		filterType === 'UPN';
 }
 
 
 function isChannelSectionType(type){
 	var filterType = mapRawSectionTypeToFilterType(type);
 
-	return filterType === 'C' || filterType === 'UPE' || filterType === 'UPN' || filterType === 'MC';
+	return filterType === 'C' || filterType === 'PFC' || filterType === 'UPE' || filterType === 'UPN' || filterType === 'MC';
 }
 
 
@@ -1530,6 +1534,30 @@ function getFlangeReferenceHalfRun(type, flangeWidth, webThickness){
 }
 
 
+function hasUsableSlopedFlangeGeometry(type, flangeWidth, webThickness, flangeThickness){
+	var referenceHalfRun;
+	var computedTipThickness;
+
+	if (isSlopedFlangeSectionType(type) !== true){
+		return false;
+	}
+
+	if (!isFinite(flangeThickness) || flangeThickness <= 0){
+		return false;
+	}
+
+	referenceHalfRun = getFlangeReferenceHalfRun(type, flangeWidth, webThickness);
+	if (!isFinite(referenceHalfRun) || referenceHalfRun <= 0){
+		return false;
+	}
+
+	computedTipThickness = flangeThickness - (referenceHalfRun * S_FLANGE_INNER_FACE_SLOPE);
+
+	// If taper math collapses the flange tip, fall back to parallel flange rendering.
+	return isFinite(computedTipThickness) && computedTipThickness > 0;
+}
+
+
 function getFlangeTipThickness(type, flangeWidth, webThickness, flangeThickness){
 	var referenceHalfRun;
 	var computedTipThickness;
@@ -1538,7 +1566,7 @@ function getFlangeTipThickness(type, flangeWidth, webThickness, flangeThickness)
 		return 0;
 	}
 
-	if (isSlopedFlangeSectionType(type) !== true){
+	if (hasUsableSlopedFlangeGeometry(type, flangeWidth, webThickness, flangeThickness) !== true){
 		return Math.max(0, flangeThickness);
 	}
 
@@ -1558,11 +1586,11 @@ function getFlangeWebThickness(type, flangeWidth, webThickness, flangeThickness,
 	var referenceHalfRun;
 	var computedWebThickness;
 
-	if (isSlopedFlangeSectionType(type) !== true){
+	if (hasUsableSlopedFlangeGeometry(type, flangeWidth, webThickness, flangeThickness) !== true){
 		return flangeThickness;
 	}
 
-	// AISC S/C/MC sections use a tapered inner flange face with 2:12 slope.
+	// Sloped-flange families (S/C/MC/UPN/TFB) use a tapered inner flange face with 2:12 slope.
 	referenceHalfRun = getFlangeReferenceHalfRun(type, flangeWidth, webThickness);
 	computedWebThickness = flangeThickness + (referenceHalfRun * S_FLANGE_INNER_FACE_SLOPE);
 
@@ -1578,7 +1606,7 @@ function getFlangeWebThickness(type, flangeWidth, webThickness, flangeThickness,
 }
 
 
-function getFlangeThicknessReferenceXOffset(type, flangeWidth, webThickness){
+function getFlangeThicknessReferenceXOffset(type, flangeWidth, webThickness, flangeThickness){
 	var flangeProjection;
 	var webRightOffset;
 
@@ -1586,7 +1614,7 @@ function getFlangeThicknessReferenceXOffset(type, flangeWidth, webThickness){
 		return 0;
 	}
 
-	if (isSlopedFlangeSectionType(type) !== true || !isFinite(webThickness)){
+	if (!isFinite(webThickness) || hasUsableSlopedFlangeGeometry(type, flangeWidth, webThickness, flangeThickness) !== true){
 		return flangeWidth / 2;
 	}
 
@@ -2232,13 +2260,13 @@ function getActiveSectionType(rows){
 
 function getSectionTypeFilterDisplayLabel(type){
 	if (type === 'LE'){
-		if (currentShapeSetKey === 'britishShapes'){
+		if (currentShapeSetKey === 'britishShapes' || currentShapeSetKey === 'australianShapes'){
 			return 'EA';
 		}
 		return 'Le';
 	}
 	if (type === 'LU'){
-		if (currentShapeSetKey === 'britishShapes'){
+		if (currentShapeSetKey === 'britishShapes' || currentShapeSetKey === 'australianShapes'){
 			return 'UA';
 		}
 		return 'Lu';
