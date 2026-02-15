@@ -69,7 +69,7 @@ var ANGLE_SECTION_ORIGIN_Y_SHIFT = 24;
 var PROPERTY_LABELS = ['title', 'Dead Load: ', 'Area: ', 'Ix: ', 'Sx: ', 'rx: ', 'Zx: ', 'Iy: ', 'Sy: ', 'ry: ', 'Zy: ', 'J: ', 'Cw: '];
 var PROPERTY_X_LAYOUT = [0, PROPERTY_X_COL_1, PROPERTY_X_COL_1, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_2, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_3, PROPERTY_X_COL_1, PROPERTY_X_COL_1];
 var PROPERTY_Y_LAYOUT = [0, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1, PROPERTY_Y_ROW_1 + PROPERTY_ROW_STEP, PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (2 * PROPERTY_ROW_STEP), PROPERTY_Y_ROW_1 + (3 * PROPERTY_ROW_STEP)];
-var SECTION_TYPE_FILTER_ORDER = ['W', 'IPE', 'HE', 'IPN', 'M', 'S', 'HL', 'HD', 'HP', 'C', 'UPE', 'UPN', 'MC', 'LE', 'LU', 'HEAT', 'HEBT', 'IPET', 'WT', 'MT', 'ST', 'HSS', 'PIPE'];
+var SECTION_TYPE_FILTER_ORDER = ['W', 'UB', 'UC', 'IPE', 'HE', 'IPN', 'M', 'S', 'HL', 'HD', 'HP', 'C', 'UPE', 'UPN', 'MC', 'LE', 'LU', 'UBT', 'UCT', 'HEAT', 'HEBT', 'IPET', 'WT', 'MT', 'ST', 'HSS', 'CHS', 'RHS', 'SHS', 'PIPE'];
 var SECTION_TYPE_FILTER_MAP = {
 	W: 'W',
 	UB: 'W',
@@ -267,12 +267,28 @@ function isSectionTypeFilterEnabledForShapeSet(shapeSetKey){
 }
 
 
-function mapRawSectionTypeToFilterType(rawType){
+function mapRawSectionTypeToFilterType(rawType, shapeSetKey){
+	var normalizedRawType = String(rawType || '').toUpperCase();
+	var effectiveShapeSetKey = shapeSetKey || currentShapeSetKey;
+
 	if (!rawType){
 		return '';
 	}
 
-	return SECTION_TYPE_FILTER_MAP[rawType] || '';
+	// British UB/UC must be split as separate section tabs.
+	if (effectiveShapeSetKey === 'britishShapes' && (normalizedRawType === 'UB' || normalizedRawType === 'UC')){
+		return normalizedRawType;
+	}
+	// British UBT/UCT must be split as separate tee tabs.
+	if (effectiveShapeSetKey === 'britishShapes' && (normalizedRawType === 'UBT' || normalizedRawType === 'UCT')){
+		return normalizedRawType;
+	}
+	// British CHS/RHS/SHS must be shown as separate hollow-section tabs.
+	if (effectiveShapeSetKey === 'britishShapes' && (normalizedRawType === 'CHS' || normalizedRawType === 'RHS' || normalizedRawType === 'SHS')){
+		return normalizedRawType;
+	}
+
+	return SECTION_TYPE_FILTER_MAP[normalizedRawType] || '';
 }
 
 
@@ -280,6 +296,18 @@ function isPipeRawType(rawType){
 	var normalizedRawType = String(rawType || '').toUpperCase();
 
 	return normalizedRawType === 'PIPE' || normalizedRawType === 'PIP';
+}
+
+
+function isCircularHollowRawType(rawType){
+	var normalizedRawType = String(rawType || '').toUpperCase();
+
+	return isPipeRawType(normalizedRawType) === true ||
+		normalizedRawType === 'CHS' ||
+		normalizedRawType === 'CHS C250' ||
+		normalizedRawType === 'CHS C350' ||
+		normalizedRawType === 'HSS C' ||
+		normalizedRawType === 'HSS C A500';
 }
 
 
@@ -319,9 +347,9 @@ function isDoubleCSectionRow(row){
 }
 
 
-function getFilterSectionType(row){
+function getFilterSectionType(row, shapeSetKey){
 	var rawType = getRowSectionType(row);
-	var filterType = mapRawSectionTypeToFilterType(rawType);
+	var filterType = mapRawSectionTypeToFilterType(rawType, shapeSetKey);
 
 	// Double-channel built-up sections (2MC...) are intentionally excluded from the MC list.
 	if (filterType === 'MC' && isDoubleMcSectionRow(row) === true){
@@ -357,7 +385,9 @@ function getScaleByExtent(availablePixels, extent){
 
 
 function isTeeFilterType(filterType){
-	return filterType === 'WT' ||
+	return filterType === 'UBT' ||
+		filterType === 'UCT' ||
+		filterType === 'WT' ||
 		filterType === 'HEAT' ||
 		filterType === 'HEBT' ||
 		filterType === 'IPET' ||
@@ -366,7 +396,7 @@ function isTeeFilterType(filterType){
 }
 
 
-function calculateShapeSetStandardScale(shapeSet){
+function calculateShapeSetStandardScale(shapeSet, shapeSetKey){
 	var rows = getNormalizedRows(shapeSet);
 	var maxDepth = 0;
 	var maxWidth = 0;
@@ -383,7 +413,7 @@ function calculateShapeSetStandardScale(shapeSet){
 			continue;
 		}
 
-		filterType = getFilterSectionType(row);
+		filterType = getFilterSectionType(row, shapeSetKey);
 		if (!filterType){
 			continue;
 		}
@@ -447,7 +477,7 @@ function calculateScaleForRows(rows){
 }
 
 
-function calculateShapeSetTypeStandardScales(shapeSet){
+function calculateShapeSetTypeStandardScales(shapeSet, shapeSetKey){
 	var rows = getNormalizedRows(shapeSet);
 	var rowsByFilterType = {};
 	var scales = {};
@@ -465,7 +495,7 @@ function calculateShapeSetTypeStandardScales(shapeSet){
 			continue;
 		}
 
-		filterType = getFilterSectionType(row);
+		filterType = getFilterSectionType(row, shapeSetKey);
 		if (!filterType || !rowsByFilterType[filterType]){
 			continue;
 		}
@@ -615,27 +645,27 @@ function initializeVariables(){
 	// 2) widest drawable section
 	// 3) tallest tee (WT/MT/ST)
 	// 4) widest tee (WT/MT/ST)
-	STD_CANADIAN_SCALE = calculateShapeSetStandardScale(canadianShapes);
-	STD_AMERICAN_SCALE = calculateShapeSetStandardScale(americanShapes);
-	STD_EUROPEAN_SCALE = calculateShapeSetStandardScale(europeanShapes);
-	STD_BRITISH_SCALE = calculateShapeSetStandardScale(britishShapes);
-	STD_AUSTRALIAN_SCALE = calculateShapeSetStandardScale(australianShapes);
-	STD_INDIAN_SCALE = calculateShapeSetStandardScale(indianShapes);
-	STD_BRAZILIAN_SCALE = calculateShapeSetStandardScale(brazilianShapes);
-	STD_CHINESE_SCALE = calculateShapeSetStandardScale(chineseShapes);
-	STD_SOUTH_AFRICAN_SCALE = calculateShapeSetStandardScale(southAfricanShapes);
+	STD_CANADIAN_SCALE = calculateShapeSetStandardScale(canadianShapes, 'canadianShapes');
+	STD_AMERICAN_SCALE = calculateShapeSetStandardScale(americanShapes, 'americanShapes');
+	STD_EUROPEAN_SCALE = calculateShapeSetStandardScale(europeanShapes, 'europeanShapes');
+	STD_BRITISH_SCALE = calculateShapeSetStandardScale(britishShapes, 'britishShapes');
+	STD_AUSTRALIAN_SCALE = calculateShapeSetStandardScale(australianShapes, 'australianShapes');
+	STD_INDIAN_SCALE = calculateShapeSetStandardScale(indianShapes, 'indianShapes');
+	STD_BRAZILIAN_SCALE = calculateShapeSetStandardScale(brazilianShapes, 'brazilianShapes');
+	STD_CHINESE_SCALE = calculateShapeSetStandardScale(chineseShapes, 'chineseShapes');
+	STD_SOUTH_AFRICAN_SCALE = calculateShapeSetStandardScale(southAfricanShapes, 'southAfricanShapes');
 	// Per-type non-zoom scales (W, M, HP, C, MC, S, WT, MT, ST) are computed
 	// from only the rows available in each displayed type tab.
 	standardScaleBySectionTypeByShapeSet = {
-		canadianShapes: calculateShapeSetTypeStandardScales(canadianShapes),
-		americanShapes: calculateShapeSetTypeStandardScales(americanShapes),
-		europeanShapes: calculateShapeSetTypeStandardScales(europeanShapes),
-		britishShapes: calculateShapeSetTypeStandardScales(britishShapes),
-		australianShapes: calculateShapeSetTypeStandardScales(australianShapes),
-		indianShapes: calculateShapeSetTypeStandardScales(indianShapes),
-		brazilianShapes: calculateShapeSetTypeStandardScales(brazilianShapes),
-		chineseShapes: calculateShapeSetTypeStandardScales(chineseShapes),
-		southAfricanShapes: calculateShapeSetTypeStandardScales(southAfricanShapes)
+		canadianShapes: calculateShapeSetTypeStandardScales(canadianShapes, 'canadianShapes'),
+		americanShapes: calculateShapeSetTypeStandardScales(americanShapes, 'americanShapes'),
+		europeanShapes: calculateShapeSetTypeStandardScales(europeanShapes, 'europeanShapes'),
+		britishShapes: calculateShapeSetTypeStandardScales(britishShapes, 'britishShapes'),
+		australianShapes: calculateShapeSetTypeStandardScales(australianShapes, 'australianShapes'),
+		indianShapes: calculateShapeSetTypeStandardScales(indianShapes, 'indianShapes'),
+		brazilianShapes: calculateShapeSetTypeStandardScales(brazilianShapes, 'brazilianShapes'),
+		chineseShapes: calculateShapeSetTypeStandardScales(chineseShapes, 'chineseShapes'),
+		southAfricanShapes: calculateShapeSetTypeStandardScales(southAfricanShapes, 'southAfricanShapes')
 	};
 	standardScale = STD_CANADIAN_SCALE;
 	
@@ -1225,8 +1255,8 @@ function normalizeLegacyShapeRow(row){
 	var depth = firstFiniteNumber([row.d, row.D]);
 	var width = firstFiniteNumber([row.b, row.Bf1, row.Bf2]);
 
-	if (!isFinite(width) && isPipeRawType(explicitType) === true){
-		// PIPE/PIP rows usually store only diameter (D). Use D as width for rendering/filtering.
+	if (!isFinite(width) && isCircularHollowRawType(explicitType) === true){
+		// Circular hollow rows often store only diameter (D). Use D as width for rendering/filtering.
 		width = depth;
 	}
 
@@ -1280,8 +1310,8 @@ function normalizeWorkbookShapeRow(row){
 	var ixValue = firstFiniteNumber([row.Ix, row.ix]);
 	var iyValue = firstFiniteNumber([row.Iy, row.iy]);
 
-	if (!isFinite(width) && isPipeRawType(explicitType) === true){
-		// PIPE/PIP rows usually store only diameter (D). Use D as width for rendering/filtering.
+	if (!isFinite(width) && isCircularHollowRawType(explicitType) === true){
+		// Circular hollow rows often store only diameter (D). Use D as width for rendering/filtering.
 		width = depth;
 	}
 
@@ -1707,7 +1737,7 @@ function isWideFlangeFamily(type){
 function isHssSectionType(type){
 	var filterType = mapRawSectionTypeToFilterType(type);
 
-	return filterType === 'HSS';
+	return filterType === 'HSS' || filterType === 'CHS' || filterType === 'RHS' || filterType === 'SHS';
 }
 
 
@@ -2202,9 +2232,15 @@ function getActiveSectionType(rows){
 
 function getSectionTypeFilterDisplayLabel(type){
 	if (type === 'LE'){
+		if (currentShapeSetKey === 'britishShapes'){
+			return 'EA';
+		}
 		return 'Le';
 	}
 	if (type === 'LU'){
+		if (currentShapeSetKey === 'britishShapes'){
+			return 'UA';
+		}
 		return 'Lu';
 	}
 
