@@ -710,11 +710,19 @@
 		  return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
 		};
 
-		function cambiarTabIndex() {
-		  document.getElementById('in').tabIndex="1";
-		  document.getElementById('out').tabIndex="3";
-		  document.getElementById('valIn').tabIndex="2";
-		}
+			function cambiarTabIndex() {
+			  // Keep keyboard flow aligned with the visible workflow:
+			  // value in -> input units -> output units -> controls -> search.
+			  document.getElementById('valIn').tabIndex = 1;
+			  document.getElementById('in').tabIndex = 2;
+			  document.getElementById('out').tabIndex = 3;
+			  document.getElementById('btn-switch').tabIndex = 4;
+			  document.getElementById('btn-clear').tabIndex = 5;
+			  document.getElementById('btn-minus').tabIndex = 6;
+			  document.getElementById('btn-plus').tabIndex = 7;
+			  document.getElementById('busqueda').tabIndex = 8;
+			  document.getElementById('valOut').tabIndex = -1;
+			}
 
 		// El inicializador de eventos lo meto en una funcion para llamarlo controladamente.
 		// Despues de que la DB haya sido mostrada para que los elementos ya existan.
