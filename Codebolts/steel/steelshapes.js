@@ -1427,6 +1427,40 @@ function findBeamRowByName(rows, name){
 }
 
 
+function restoreSectionTypeFromSavedBeam(shapeSetKey){
+	var rows;
+	var savedBeamName;
+	var savedBeamRow;
+	var savedBeamType;
+
+	if (!shapeSetKey || !isSectionTypeFilterEnabledForShapeSet(shapeSetKey)){
+		return;
+	}
+
+	rows = getCurrentShapeRows();
+	if (!rows || rows.length === 0){
+		return;
+	}
+
+	savedBeamName = selectedBeamByShapeSet[shapeSetKey];
+	if (!savedBeamName){
+		return;
+	}
+
+	savedBeamRow = findBeamRowByName(rows, savedBeamName);
+	if (!savedBeamRow){
+		return;
+	}
+
+	savedBeamType = getFilterSectionType(savedBeamRow, shapeSetKey);
+	if (!savedBeamType){
+		return;
+	}
+
+	selectedSectionTypeByShapeSet[shapeSetKey] = savedBeamType;
+}
+
+
 function toNumber(value){
 	var number = parseFloat(value);
 
@@ -2430,6 +2464,9 @@ function setMostListeners(){
 			alert('Oops! This is an unexpected error. Please contact the developer ;)');
 			return;
 		}
+
+		// On country switch, align section-type tab with the previously saved beam for that country.
+		restoreSectionTypeFromSavedBeam(currentShapeSetKey);
 		
 		$('.shapes').removeClass('on');
 		$(this).addClass('on');
