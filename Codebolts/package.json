@@ -1,0 +1,12 @@
+{
+  "name": "codebolts",
+  "private": true,
+  "scripts": {
+    "build:deploy": "node scripts/prepare-firebase-deploy.mjs",
+    "deploy:hosting": "npm run build:deploy && firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "clean-css": "^5.3.3",
+    "javascript-obfuscator": "^4.1.1"
+  }
+}
