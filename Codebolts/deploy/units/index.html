@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html>
+ 
+<head>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <meta charset=utf-8 />
+    <title>Units Converter</title>
+    <link rel="icon" href="icon.ico" type="image/x-icon">
+	<meta name="keywords" content="unit converter, unit translator" />
+	<meta name="description" content="Free online unit converter" />
+	<meta name="description" content="The most powerfull unit converter in the world. It features mix of units to build new custom complexe units. You can combine existing units to convert values into any dimension you can possibly define or imagine." />
+	<link href='https://fonts.googleapis.com/css?family=Roboto:400,700' rel='stylesheet' type='text/css'>
+		<link href='https://fonts.googleapis.com/css?family=Oswald:400,700' rel='stylesheet' type='text/css'>	
+    
+    <!--[if IE]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+        
+	<style>
+		body {
+			font-family: MenschRegular, Menlo, Monaco, consolas, monospace;
+			font-size: 12px;
+			color: #484848;
+			background: #E8E8E8;
+		}
+
+		#titulo-container{
+			margin-bottom: 20px;
+		}
+
+		#titulo-nombre{
+			font-family: 'Oswald', sans-serif;
+			font-size: 35px;
+			font-weight: 400;
+			color: #E64016;
+		}
+
+		#titulo-slogan{
+			font-family: Roboto;
+			font-size: 12px;
+			font-weight: 400;
+			color: #7F7F7F;
+		}
+
+		#titulo-autor{
+			font-family: Roboto;
+			font-size: 12px;
+			font-weight: 400;
+			color: #7F7F7F;
+		}
+
+		.marco-principal{
+			padding-top: 5px;
+			padding-left: 30px;
+		}
+
+		.ingreso-info{
+			width: 180px;
+			border:solid #7D7D7D 1px;
+			border-radius: 7px;
+			height: 25px;
+			padding-left: 10px;
+			padding-right: 10px;
+
+		}
+		
+		#how-to-use{
+			cursor: pointer;
+			font-weight: bold;
+			color: #0033FF;
+		}
+
+		.bl{
+			color: #0033FF;
+			font-family:"Courier New";
+		}
+
+		#help{
+			max-width: 750px;
+			background: #FDFDFD;
+			padding: 15px;
+			border:none;
+			border-radius:15px;
+			margin-top: 10px;
+			text-align: justify;
+		}
+
+		.oculto{
+			display:none;
+		}
+
+		.btn{
+			background-color: #F3F3F3;
+			border:solid #7D7D7D 1px;
+			border-radius:5px;
+			color: #6C6C6C;
+			text-align: center;
+			cursor:pointer;
+			padding: 5px;
+		}
+	  
+		#marco-titulos{
+			width: 210px;
+			float: left;
+		}
+
+		.db-sub{
+			height: 22px;
+			background-color: #F3F3F3;
+			cursor: pointer;
+			position:relative;
+			border-top:solid #CBCBCB 1px;
+		}
+
+		.db-sub-span{
+			padding-left: 9px;
+			position: absolute;
+			top:20%;
+		}
+
+		.borde-abajo{
+			border-bottom:solid #CBCBCB 1px;
+		}
+
+		.sel{
+			background-color: #474747;
+			color: white;
+		}
+
+		#marco-simbolos{
+			width: 550px;
+			float: left;
+			margin-left:20px;
+		}
+		
+		.db-sim{
+			height: 22px;
+			background-color: #474747;
+			color:white;
+			cursor: pointer;
+			position:relative;
+			border-top:solid #CBCBCB 1px;
+		}
+
+		.db-sim-span{
+			padding-left: 9px;
+			position: absolute;
+			top:15%;
+		}
+		
+		.db-nom-span{
+			padding-left: 9px;
+			position: absolute;
+			left: 70px;
+			top:15%;
+		}
+		
+		#marco-db{
+			margin-top: 17px;
+			width:957px;
+			overflow: auto;
+		}
+
+		#busqueda{
+			margin-top: 17px;
+			border:solid #7D7D7D 1px;
+			border-radius: 7px;
+			height: 25px;
+			width: 770px;
+			padding-left: 10px;
+		}
+
+		#resultados{
+			margin-top: 5px;
+			height: 100px;
+			width: 770px;
+			overflow: auto;
+			background-color: white;
+			border:solid #7D7D7D 1px;
+			border-radius:7px;
+			padding-left: 10px;
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+
+
+		#resultados::-webkit-scrollbar {
+		    -webkit-appearance: none;
+		    width: 11px;
+		    height: 11px;
+		}
+
+		#resultados::-webkit-scrollbar-thumb {
+		    border-radius: 8px;
+		    border: 2px solid white; /* should match background, can't be transparent */
+		    background-color: #AAAAAA;
+		}
+
+		.col1{
+			width: 165px;
+		}
+
+		.col2{
+			width: 70px;
+		}
+
+		.col3{
+			width: auto;
+		}
+
+
+.unselectable {
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;
+   -ms-user-select: none;
+   user-select: none;
+}
+		
+    </style>
+
+	<script type="text/javascript">
+
+	  var _gaq = _gaq || [];
+	  _gaq.push(['_setAccount', 'UA-33518485-1']);
+	  _gaq.push(['_trackPageview']);
+
+	  (function() {
+		var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	  })();
+
+	</script>
+	
+</head>
+  
+<body class="unselectable">
+
+    <ul class="nav nav-tabs" style="font-family: Roboto; font-size: 14px;">
+      <li role="presentation"><a href="../index.html">Home</a></li>
+      <li role="presentation" class="active"><a href="../units/index.html">Units Converter</a></li>
+      <li role="presentation"><a href="../steel/index.html">Steel Shapes</a></li>
+    </ul>
+    
+    <div class="marco-principal">
+      
+
+		<div id="titulo-container">
+			<div id="titulo-nombre">Units Converter</div>
+			<div id="titulo-slogan">A universe of possibilities!</div>
+			<div id="titulo-slogan">Combine units in any possible way you can imagine!</div>
+			<div id="titulo-autor">by Jorge Serrano</div>
+			<div id="titulo-autor">jorgeandres.serrano@gmail.com</div>
+		</div>
+
+
+      
+    <table>
+        <tr>
+			<td>Input</td>
+			<td><input id="valIn" class='ingreso-info' type="text" value="" placeholder="Input value" style="text-align: right"></td>
+			<td><input id="in" class='ingreso-info' type="text" value="" placeholder="example: Btu/(h*ft*dF)" autofocus title='Enter any combination of units you can imagine'></td>
+		</tr>
+        
+        <tr>
+			<td>Output</td>
+			<td><input id="valOut" class='ingreso-info' type="text" value="" placeholder="Result" disabled style="text-align: right"></td>
+			<td><input id="out" class='ingreso-info' type="text" value="" placeholder="example: W/(m*K)" title='Enter any combination of units you can imagine'></td>
+		</tr>
+        
+        <tr>
+          <td></td>
+          <td colspan="2" style="padding-top:10px">
+				<a class='btn' id="btn-switch">Switch units</a>
+				<a class='btn' id="btn-clear">Clear all</a>
+				<a class='btn' id="btn-minus">-</a>
+				<a class='btn' id="btn-plus">+</a>
+				<a class='' id="decimals">0.0000</a>
+          <td>
+        </tr>
+    </table>
+      
+      
+	<div style="margin-top:35px">
+		REMEMBER: <br/>
+		- Units are case-sensitive <br/>
+		- Be sure units are of the same dimension<br/>
+		- Use only: 0-9 a-z A-Z ( ) . / * ^ - <br/>
+		<!-- - I'm almost everyday upgrading the software. You'll find new things very often.<br/> -->
+		<a id='how-to-use'>- TUTORIAL. (Click here to expand and collapse the Help text)</a>
+	</div>
+  
+	<div id="help" class="oculto">
+		HOW TO USE
+		<br/>
+		<br/>
+		You can combine the above defined units in any possible way you can imagine! Just make sure input and output units are of the same 'dimension'. You will not be comparing <a class='bl'>km</a> (kilometers) with <a class='bl'>s</a> (seconds).
+		<br/><br/>
+		There are some named units like <a class='bl'>Pa</a> (Pascals), <a class='bl'>J</a> (Joules), <a class='bl'>N</a> (Newtons), <a class='bl'>gravity</a> (gravity), <a class='bl'>W</a> (Watt) and many others already defined that you can directly type in your combinations. There are also currency untis.
+		<br/><br/>
+		You can even alter units by diving or multiplying by factors like <a class='bl'>m*1000</a> or <a class='bl'>m*1e3</a> which will be like typing <a class='bl'>km</a>. This is very useful in many cases; for example to write a unit that is not define in the database like a picometer (pm) equal to 1x10^-12 meters <a class='bl'>m*1e-12</a> 
+		<br/><br/>
+		
+		<br/>
+		Here are some few examples.
+		<br/><br/>
+		- Area. Could be like <a class='bl'>m^2</a> or <a class='bl'>in*in</a> for <a class='bl'>in^2</a>. You can use any distance unit to create an area unit.
+		<br/><br/>
+		- Volume. Could be like <a class='bl'>m^3</a> or <a class='bl'>yd*yd*yd</a> for <a class='bl'>yd^3</a> or <a class='bl'>yd^2*yd</a> which is the same; or even <a class='bl'>m^2*cm</a>, equivalent to <a class='bl'>m^2*0.1*m</a>. You can use any distance unit(s) to create a volume unit.
+		<br/><br/>
+		- Time/Frequency. Could be any defined unit above: <a class='bl'>s</a> (second), <a class='bl'>h</a> (hour), <a class='bl'>min</a> (minute), <a class='bl'>1/s</a>, <a class='bl'>1/h</a>, <a class='bl'>s^-1</a> or even <a class='bl'>Hz</a> (Hertz) or <a class='bl'>rpm</a> (revolutions per minute).
+		<br/><br/>
+		- Flow. Defined as volume divided by time, could be like <a class='bl'>m^3/s</a> or <a class='bl'>(ft*ft*ft)/week</a> for <a class='bl'>yd^3/week</a>, whatever you want.
+		<br/><br/>
+		- Speed. Defined as distance divided by time, could be like <a class='bl'>m/s</a>, <a class='bl'>mi/h</a> or <a class='bl'>mach</a> whatever you want as long as there's a length unit divided by a time unit. (Ever wondered to know the speed of sound <a class='bl'>mach</a> in terms of <a class='bl'>mi/year</a>?) You can also analyze angular speeds like <a class='bl'>rev/min</a> or <a class='bl'>rad/s</a>. Just use an angle unit divided by a time unit.
+		<br/><br/>
+		- Pressure. Defined as force divided by area, could be like <a class='bl'>kgf/m^2</a> or <a class='bl'>lbf/(cm*cm)</a> for <a class='bl'>lbf/cm^2</a> or <a class='bl'>N/acre</a> or <a class='bl'>(gravity*kg)/m^2</a> or just use <a class='bl'>Pa</a>. Combinations could be whatever you want as long as there's a force divided by an area.
+		<br/><br/>
+		- Energy. Defined as force multiplied by distance, could be like <a class='bl'>lbf*cm</a> or <a class='bl'>N*mm</a> or <a class='bl'>kJ</a> or even <a class='bl'>(lb*(ft/h^2))*mm</a> which is (mass*(acceleration)*distance), where mass*acceleration is force. Make sure parentheses are in the right place. (Additional parentheses are added for clearer understanding. You may add more than required and it will not hurt the unit composition)
+		<br/><br/>
+		- Power. Defined as energy divided by time, could be like <a class='bl'>(lb*(ft/s/s))*mm/s</a> which is (mass*(acceleration)*distance/time), where mass*acceleration is force, or just use <a class='bl'>kW</a> or <a class='bl'>BTU/h</a>. Whatever you want.
+		<br/><br/>
+		- Distributed loads. Could be like <a class='bl'>kN/m</a> or <a class='bl'>kgf/cm</a> or <a class='bl'>lbf/ft</a>. As usual, whatever you want.
+		<br/><br/>
+		- Gradients. Representing the steepness of a variation, you could define yours in any possible way you can imagine, and even add more units to the definition.
+		<br/><br/>
+		- Distributed loads. Could be like <a class='bl'>kN/m</a> or <a class='bl'>kgf/cm</a> or <a class='bl'>lbf/ft</a>. As usual, whatever you want.
+		<br/><br/>
+		- Currency. Could be like <a class='bl'>USD</a> to <a class='bl'>CAD</a> or even <a class='bl'>USD/ft^2</a> to <a class='bl'>CAD/m^2</a> to know how much is a <a class='bl'>m^2</a> in Canadian Dollars when you the price in American Dollars by <a class='bl'>ft^2</a>. You could even define a gradient, like <a class='bl'>USD/ft^2/year</a> to <a class='bl'>CAD/m^2/month</a> to know how much a <a class='bl'>m^2</a> increases or decrease its value in a month when you know the variation by <a class='bl'>ft^2</a> by <a class='bl'>year</a> in American Dollars. As usual, mix anything with whatever you want.(<a class='bl'>USD/W*h</a> to <a class='bl'>CAD/kW*h</a>)
+		<br/><br/>
+		- Efficiency/Performance/Consumption. <br/>&raquo Example 1: A machine has an efficiency of making X product at a rate of 300 units by minute and you need to know how much dozens by week. Input: <a class='bl'>1/min</a>, Value: <a class='bl'>300</a> and Output: <a class='bl'>12/week</a>. <br/>&raquo Example 2: A construction team does 100 m^2 of masonry every 3 days, and you want to know how much is that in terms of ft^2 by month. Input: <a class='bl'>m^2/(3*day)</a>, Value: <a class='bl'>100</a> and Output: <a class='bl'>ft^2/month</a>.
+		<br/><br/>
+		- Other. <br/>&raquo Example 1: Certain aqueduct design has a consumption parameter of 175 liters per human per day and you would like to know how many cubic meters for a population of 1,000,000 persons during a lapse of 2 hours. Input: <a class='bl'>L/1/day</a>, Value: <a class='bl'>175</a> and Output: <a class='bl'>m^3/1000000/(2*h)</a>
+		<br/><br/>
+		The list can go on and on almost infinitely. Build complex units or build yours.
+		<br/><br/>
+		Your imagination is the limit. Enjoy! =)
+		<br/><br/>
+		Note: Click on the unit at the bottom list and it'll be placed upside. The software will remember the last place where you clicked in; whether if it was Input or Output.
+		<br/><br/>
+		Sources of information:
+		<br/>
+		<a style="font-size: 11px">
+		http://physics.nist.gov/cuu/Constants/index.html <br/>
+		http://www.wikipedia.org/ <br/>
+		http://openexchangerates.org/ <br/>
+		http://www.businesslink.gov.uk/bdotg/action/detail?itemId=1076142107&type=RESOURCES
+		</a>
+		
+	</div>
+  
+	  <input id='busqueda' type="text" value="" placeholder="Quick search the database" title="Can't find the symbol of a unit? Make a quick search">
+	  <div id="resultados"></div>
+
+		<div id='marco-db'>
+			<div id='marco-titulos'>
+			</div>
+
+			<div id='marco-simbolos'>
+			</div>
+		</div>
+		
+		<div style="margin-top: 50px; margin-bottom: 30px; display:block;">
+		Please feel free to contact me for any reason at: <br/>
+		</div>
+            
+    </div>
+  
+  <script>
+
+	/**
+	  Yet another unit converter but less restricted to a database of units.
+	  Intellectual property: Jorge Andres Serrano Ardila (jorgeandres.serrano@gmail.com)
+	  Please feel free to contact me for any reason.
+	  
+	  I'm not a professional programming, this is just my hobby.
+	  
+	  Javascript is not minified since it's too little and probably someone may want to read
+	  it easier, directly from the browser.
+	*/
+
+	$(document).ready(function () {
+
+	//window.open("http://www.jorgeandresserrano.com/units/inmantenance.html","_self","","true");
+	
+		/* Esta es la base de datos.
+		  IMPORTANTE:
+		  1. NO SE PUEDE USAR EL SIMBOLO 'e' porque esa letra se usa para la notacion cientifica.
+		  2. El 'value' de las unidades UNICAMENTE puede ser numero.
+		  3. 'named' y 'constant' pueden tener de equivalencia una unidad 'named' u otra 'constant' (Esta otra 'constant' solo debe tener 'units' como 'equivalence', de lo contrario toca hacer muchos ciclos).
+		  4. Cuando la unidad sea adimensional, 'equivalence'=1
+		  5. Nunca usar el simbolo de potencia en la base de datos. Eso es exlusivo del usuario. De lo contrario me toca meter el cambio de este simbolo en el ciclo
+		*/
+		var ultimoInput = "in",
+		db = {
+			  
+			"constants":
+			{
+				"constants":
+				[
+					{"symbol": "titulo", "name": "", "description": "CONSTANTS", "idHtml":"constantesgenerales"},
+					{"symbol": "gravity", "name": "'standard gravity': 9.80665 [m/s^2]", "equivalence": "(m/s/s)", "value": "9.80665"},
+					{"symbol": "Gal", "name": "gal or galileo: 1 [cm/s^2]", "equivalence": "(cm/s/s)", "value": "1"},
+					{"symbol": "pi", "name": "pi: 3.1415926535897932384626433832795028841971693993751058209", "equivalence": "1", "value": "3.1415926535"},
+					{"symbol": "mu", "name": "atomic mass constant: 1.660538921(73)x10^-27 [kg]", "equivalence": "(kg)", "value": "1.660538921e-27"},
+					//{"symbol": "NA", "name": "Avogadro constant: 6.02214129(27)x10^23 [mol^-1]", "equivalence": "(1/mol)", "value": "6.02214129e23"},
+					{"symbol": "k", "name": "Boltzmann constant: 1.3806488(13)x10^-23 [J K^-1]", "equivalence": "(J/K)", "value": "1.3806488e-23"},
+					{"symbol": "Go", "name": "conductance quantum: 7.7480917346(25)x10^-5 [S]", "equivalence": "(s)", "value": "7.7480917346e-5"},
+					{"symbol": "Eo", "name": "electric constant: 8.854187817...x10^-12 [F m^-1]", "equivalence": "(F/m)", "value": "8.854187817e-12"},
+					{"symbol": "me", "name": "electron mass: 9.10938291(40)x10^-31 [kg]", "equivalence": "(kg)", "value": "9.10938291e-31"},
+					{"symbol": "ee", "name": "elementary charge: 1.602176565(35)x10^-19 [C]", "equivalence": "(C)", "value": "1.602176565e-19"},
+					{"symbol": "a", "name": "fine-structure constant: 7.2973525698(24)x10^-3", "equivalence": "1", "value": "7.2973525698e-3"},
+					{"symbol": "uo", "name": "magnetic constant: 4pi x10-7 = 12.566370614...x10^-7 [N A^-2]", "equivalence": "(N/(A*A))", "value": "12.566370614e-7"},
+					{"symbol": "fo", "name": "magnetic flux quantum: 2.067833758(46)x10^-15 [Wb]", "equivalence": "(Wb)", "value": "2.067833758e-15"},
+					//{"symbol": "R", "name": "molar gas constant: 8.3144621(75) [J mol^-1 K^-1]", "equivalence": "(J/mol/K)", "value": "8.3144621"},
+					{"symbol": "G", "name": "Newtonian constant of grav.: 6.67384(80)x10^-11 [m^3 kg^-1 s^-2]", "equivalence": "(m*m*m/kg/s/s)", "value": "6.67384e-11"},
+					{"symbol": "hh", "name": "Planck constant: 6.62606957(29)x10^-34 [J s]", "equivalence": "(J*s)", "value": "6.62606957e-34"},
+					{"symbol": "h_pp", "name": "Planck constant over 2 pi: 1.054571726(47)x10^-34 [J s]", "equivalence": "(J*s)", "value": "1.054571726e-34"},
+					{"symbol": "mp", "name": "proton mass: 1.672621777(74)x10^-27 [kg]", "equivalence": "(kg)", "value": "1.672621777e-27"},
+					{"symbol": "mp_me", "name": "proton-electron mass ratio: 1836.15267245(75)", "equivalence": "1", "value": "1836.15267245"},
+					{"symbol": "R_inf", "name": "Rydberg constant: 10973731.568539(55) [m^-1]", "equivalence": "(1/m)", "value": "10973731.568539"},
+					{"symbol": "Sig", "name": "Stefan-Boltzmann constant: 5.670373(21)x10^-8 [W m^-2 K^-4]", "equivalence": "(W/(m*m)/(K*K*K*K))", "value": "5.670373e-8"}
+				]
+			},
+		
+			"units":
+			{
+				"distance":
+				[
+					{"symbol": "titulo", "name": "", "description": "DISTANCE", "idHtml":"distancia"},
+					{"symbol": "nm", "name": "nanometer", "equivalence": "m", "value": "1e-009"},
+					{"symbol": "um", "name": "micrometer", "equivalence": "m", "value": "1e-006"},
+					{"symbol": "mm", "name": "milimeter", "equivalence": "m", "value": "0.001"},
+					{"symbol": "cm", "name": "centimeter", "equivalence": "m", "value": "0.01"},
+					{"symbol": "dm", "name": "decimeter", "equivalence": "m", "value": "0.1"},
+					{"symbol": "m", "name": "meter", "equivalence": "m", "value": "1"},
+					{"symbol": "Dm", "name": "decameter", "equivalence": "m", "value": "10"},
+					{"symbol": "hm", "name": "hectometer", "equivalence": "m", "value": "100"},
+					{"symbol": "km", "name": "kilometer", "equivalence": "m", "value": "1000"},
+					{"symbol": "in", "name": "international inch", "equivalence": "m", "value": "0.0254"},
+					{"symbol": "ft", "name": "international foot", "equivalence": "m", "value": "0.3048"},
+					{"symbol": "yd", "name": "international yard", "equivalence": "m", "value": "0.9144"},
+					{"symbol": "ch", "name": "chain", "equivalence": "m", "value": "20.1168"},
+					{"symbol": "fur", "name": "furlong", "equivalence": "m", "value": "201.168"},
+					{"symbol": "mi", "name": "international mile", "equivalence": "m", "value": "1609.344"},
+					{"symbol": "M", "name": "international nautical mile", "equivalence": "m", "value": "1852"}
+				],
+				
+				"time":
+				[
+					{"symbol": "titulo", "name": "", "description": "TIME", "idHtml":"tiempo"},
+					{"symbol": "ns", "name": "nanosecond", "equivalence": "s", "value": "1e-009"},
+					{"symbol": "us", "name": "microsecond", "equivalence": "s", "value": "1e-006"}, 
+					{"symbol": "ms", "name": "millisecond", "equivalence": "s", "value": "0.001"},
+					{"symbol": "s", "name": "second", "equivalence": "s", "value": "1"},
+					{"symbol": "min", "name": "min", "equivalence": "s", "value": "60"},
+					{"symbol": "h", "name": "hour", "equivalence": "s", "value": "3600"},
+					{"symbol": "day", "name": "day", "equivalence": "s", "value": "86400"},
+					{"symbol": "week", "name": "week", "equivalence": "s", "value": "604800"},
+					{"symbol": "month", "name": "30-day month", "equivalence": "s", "value": "2592000"},
+					{"symbol": "year", "name": "365-day year", "equivalence": "s", "value": "31536000"},
+					{"symbol": "aj", "name": "Julian year", "equivalence": "s", "value": "31536000"},
+					{"symbol": "sidera", "name": "sidereal year", "equivalence": "s", "value": "31558149.76"}
+				],
+
+				"mass":
+				[
+					{"symbol": "titulo", "name": "", "description": "MASS", "idHtml":"masa"},
+					{"symbol": "ug", "name": "microgram", "equivalence": "kg", "value": "1e-009"},
+					{"symbol": "mg", "name": "milligram", "equivalence": "kg", "value": "1e-006"},
+					{"symbol": "g", "name": "gram", "equivalence": "kg", "value": "0.001"},
+					{"symbol": "kg", "name": "kilogram", "equivalence": "kg", "value": "1"},
+					{"symbol": "Mg", "name": "Megagram", "equivalence": "kg", "value": "1000"},
+					{"symbol": "tonne", "name": "metric tonne", "equivalence": "kg", "value": "1000"},
+					{"symbol": "carat", "name": "carat", "equivalence": "kg", "value": "0.0002"}, 
+					{"symbol": "gr", "name": "grain", "equivalence": "kg", "value": "6.479891e-005"},
+					{"symbol": "oz", "name": "Int. avoirdupois ounce", "equivalence": "kg", "value": "0.0283495231"},
+					{"symbol": "lb", "name": "Int. avoirdupois pound", "equivalence": "kg", "value": "0.45359237"},
+					{"symbol": "ton", "name": "Long ton", "equivalence": "kg", "value": "1016.04690883"}
+				],
+
+				"temperature":
+				[
+					{"symbol": "titulo", "name": "", "description": "TEMPERATURE", "idHtml":"temperatura"},
+					{"symbol": "K", "name": "Kelvin", "equivalence": "K", "value": "1", "aKelvin": "(X*1)", "deKelvin": "(X*1)"},
+					{"symbol": "dC", "name": "Celsius", "equivalence": "K", "value": "1", "aKelvin": "(X+273.15)", "deKelvin": "X-273.15"},
+					{"symbol": "dF", "name": "Fahrenheit", "equivalence": "K", "value": "(5/9)", "aKelvin": "((X+459.67)*(5/9))", "deKelvin": "X*(9/5)-459.67"},
+					{"symbol": "dRa", "name": "Rankine", "equivalence": "K", "value": "(5/9)", "aKelvin": "(X*(5/9))", "deKelvin": "X*(9/5)"}
+				],
+
+				"angle":
+				[
+					{"symbol": "titulo", "name": "", "description": "ANGLE", "idHtml":"angle"},
+					{"symbol": "degree", "name": "degree", "equivalence": "rad", "value": "(pi/180)"}, 
+					{"symbol": "arcsec", "name": "Arcsecond", "equivalence": "rad", "value": "(pi/180)*(1/3600)"},
+					{"symbol": "arcmin", "name": "Arcminute", "equivalence": "rad", "value": "(pi/180)*(1/60)"},
+					{"symbol": "rad", "name": "radian", "equivalence": "rad", "value": "1"},
+					{"symbol": "turn", "name": "revolution, complete rotation", "equivalence": "rad", "value": "(2*pi)"},
+					{"symbol": "grad", "name": "grade, gradian, or gon", "equivalence": "rad", "value": "(pi/180)*(360/400)"}
+				],
+				
+				"current":
+				[
+					{"symbol": "titulo", "name": "", "description": "CURRENT", "idHtml":"electric"},
+					{"symbol": "A", "name": "ampere", "equivalence": "A", "value": "1"},
+					{"symbol": "abA", "name": "abampere", "equivalence": "A", "value": "10"}
+				]
+	
+			},
+			
+			"named":
+			{
+				"frequency":
+				[
+					{"symbol": "titulo", "name": "", "description": "FREQUENCY = 1 / Time", "idHtml":"frecuencia"}, 
+					{"symbol": "Hz", "name": "hertz", "equivalence": "(1/s)", "value": "1"}, 
+					{"symbol": "rpm", "name": "revolutions per minute", "equivalence": "(1/s)", "value": "(1/60)"}	
+				],
+				
+				"speed":
+				[
+					{"symbol": "titulo", "name": "", "description": "SPEED = Distance / Time", "idHtml":"velocidad"}, 
+					{"symbol": "c", "name": "Speed of light in vaccum", "equivalence": "(m/s)", "value": "299792458"}, 
+					{"symbol": "c_i", "name": "Speed of sound at 0C and 0% hum.", "equivalence": "(m/s)", "value": "331.3"},
+					{"symbol": "c_ii", "name": "Speed of sound at 20C and 0% hum.", "equivalence": "(m/s)", "value": "343.2"},
+					{"symbol": "knot", "name": "knot", "equivalence": "(M/h)", "value": "1"}
+				],
+				 
+				"area":
+				[
+					{"symbol": "titulo", "name": "", "description": "AREA = Distance^2", "idHtml":"area"},
+					{"symbol": "ac", "name": "International acre", "equivalence": "(m*m)", "value": "4046.8564224"}, 
+					{"symbol": "ha", "name": "hectare", "equivalence": "(m*m)", "value": "10000"}
+				],
+				 
+				"volume":
+				[
+					{"symbol": "titulo", "name": "", "description": "VOLUME = Distance^3", "idHtml":"volumen"},
+					{"symbol": "mL", "name": "milliliter", "equivalence": "(m*m*m)", "value": "1e-6"},
+					{"symbol": "L", "name": "Liter", "equivalence": "(m*m*m)", "value": "0.001"}, 
+					{"symbol": "gal_UK", "name": "UK gallon", "equivalence": "(m*m*m)", "value": "0.00454609"},
+					{"symbol": "gal_US", "name": "US liquid gallon", "equivalence": "(m*m*m)", "value": "0.003785411784"}, 
+					{"symbol": "floz_UK", "name": "UK fluid ounce", "equivalence": "(m*m*m)", "value": "(28.4130625**1e-6)"},
+					{"symbol": "floz_US", "name": "US fluid ounce", "equivalence": "(m*m*m)", "value": "(2.957353e-005)"},
+					{"symbol": "pt_UK", "name": "UK pint", "equivalence": "(m*m*m)", "value": "(568.26125*1e-6)"},
+					{"symbol": "pt_US", "name": "US liquid pint", "equivalence": "(m*m*m)", "value": "(473.176473*1e-6)"},
+					{"symbol": "qt_UK", "name": "UK quart", "equivalence": "(m*m*m)", "value": "(1136.5225*1e-6)"},
+					{"symbol": "qt_US", "name": "US liquid quart", "equivalence": "(m*m*m)", "value": "(946.352946e-6)"}
+				],
+				
+				"density":
+				[
+					{"symbol": "titulo", "name": "", "description": "DENSITY = Mass / Volumen", "idHtml":"density"},
+					{"symbol": "h2o", "name": "water density at 4 Celsius", "equivalence": "(g/(cm*cm*cm))", "value": "1"}
+				],
+				
+				"pressure":
+				[
+					{"symbol": "titulo", "name": "", "description": "PRESSURE = Force / Area", "idHtml":"presion"}, 
+					{"symbol": "atm", "name": "atmosphere", "equivalence": "(kg/m/s/s)", "value": "101325"},
+					{"symbol": "Pa", "name": "Pascal", "equivalence": "(kg/m/s/s)", "value": "1"},
+					{"symbol": "kPa", "name": "kilopascal", "equivalence": "(kg/m/s/s)", "value": "1000"},
+					{"symbol": "MPa", "name": "Megapascal", "equivalence": "(kg/m/s/s)", "value": "1000000"}, 
+					{"symbol": "psi", "name": "pounds per square inch", "equivalence": "(lb*gravity/(in*in))", "value": "1"},
+					{"symbol": "ksi", "name": "kips (kilopound) per square inch", "equivalence": "(lb*gravity/(in*in))", "value": "1000"},
+					{"symbol": "psf", "name": "pounds per square foot", "equivalence": "(lb*gravity/(ft*ft))", "value": "1"},
+					{"symbol": "ksf", "name": "kips (kilopound) per square foot", "equivalence": "(lb*gravity/(ft*ft))", "value": "1000"},
+					{"symbol": "mbar", "name": "millibar", "equivalence": "(kg/m/s/s)", "value": "100"},
+					{"symbol": "bar", "name": "bar", "equivalence": "(kg/m/s/s)", "value": "100000"},
+					{"symbol": "Torr", "name": "torr", "equivalence": "(kg/m/s/s)", "value": "(101325/760)"},
+					{"symbol": "mmHg", "name": "millimeters of mercury", "equivalence": "(kg/m/s/s)", "value": "(101325/760)"},
+					{"symbol": "cmHg", "name": "centimeters of mercury", "equivalence": "(kg/m/s/s)", "value": "(101325/760)*10"}
+				],
+				
+				"energy":
+				[
+					{"symbol": "titulo", "name": "", "description": "ENERGY = Force x Distance", "idHtml":"energia"},
+					{"symbol": "J", "name": "Joule", "equivalence": "(kg*m*m/s/s)", "value": "1"},
+					{"symbol": "kJ", "name": "kilojoule", "equivalence": "(kg*m*m/s/s)", "value": "1000"},
+					{"symbol": "MJ", "name": "Megajoules", "equivalence": "(kg*m*m/s/s)", "value": "1e+6"},
+					{"symbol": "GJ", "name": "Gigajoules", "equivalence": "(kg*m*m/s/s)", "value": "1e+9"},
+					{"symbol": "cal", "name": "calorie, International Steam Table calorie", "equivalence": "(kg*m*m/s/s)", "value": "4.1868"},
+					{"symbol": "kcal", "name": "kilocalories, Inter. Steam Table calorie", "equivalence": "(kg*m*m/s/s)", "value": "4186.8"},
+					{"symbol": "eV", "name": "electronvolt", "equivalence": "(kg*m*m/s/s)", "value": "1.602176565e-19"},
+					{"symbol": "keV", "name": "kiloelectronvolts", "equivalence": "(kg*m*m/s/s)", "value": "1.602176565e-16"},
+					{"symbol": "MeV", "name": "Megaelectronvolts", "equivalence": "(kg*m*m/s/s)", "value": "1.602176565e-13"},
+					{"symbol": "GeV", "name": "Gigaelectronvolts", "equivalence": "(kg*m*m/s/s)", "value": "1.602176565e-10"},
+					{"symbol": "erg", "name": "ergs", "equivalence": "(kg*m*m/s/s)", "value": "1e-7"},
+					{"symbol": "Btu", "name": "British thermal unit, Inter. Steam Table cal.", "equivalence": "(kg*m*m/s/s)", "value": "1055.05585262"}, 
+					{"symbol": "th", "name": "Therm", "equivalence": "(kg*m*m/s/s)", "value": "105505585.262"}
+				],
+				
+				"force":
+				[
+					{"symbol": "titulo", "name": "", "description": "FORCE = Mass x Acceleration", "idHtml":"fuerza"}, 
+					{"symbol": "mN", "name": "millinewton", "equivalence": "(kg*m/s/s)", "value": "0.001"}, 
+					{"symbol": "N", "name": "Newton", "equivalence": "(kg*m/s/s)", "value": "1"},
+					{"symbol": "kN", "name": "kilonewton", "equivalence": "(kg*m/s/s)", "value": "1000"},
+					{"symbol": "gf", "name": "gram-force", "equivalence": "gravity", "value": "(0.001)"}, 
+					{"symbol": "kgf", "name": "kilogram-force", "equivalence": "gravity", "value": "(1)"},
+					{"symbol": "dyn", "name": "Dyne", "equivalence": "(kg*m/s/s)", "value": "1e-005"},
+					{"symbol": "ozf", "name": "ounce-force", "equivalence": "(oz*gravity)", "value": "(1)"},
+					{"symbol": "lbf", "name": "pound-force", "equivalence": "(lb*gravity)", "value": "(1)"},
+					{"symbol": "kip", "name": "kilopound", "equivalence": "(lb*gravity)", "value": "(1000)"}
+				],
+				
+				"power":
+				[
+					{"symbol": "titulo", "name": "", "description": "POWER = Energy / Time", "idHtml":"potencia"}, 
+					{"symbol": "W", "name": "Watt", "equivalence": "(kg*m*m/s/s/s)", "value": "1"},
+					{"symbol": "kW", "name": "kilowatt", "equivalence": "(kg*m*m/s/s/s)", "value": "1000"},
+					{"symbol": "MW", "name": "Megawatt", "equivalence": "(kg*m*m/s/s/s)", "value": "1e6"},
+					{"symbol": "GW", "name": "Gigawatt", "equivalence": "(kg*m*m/s/s/s)", "value": "1e9"},
+					{"symbol": "hp_I", "name": "mechanical horsepower", "equivalence": "(ft*lbf/min)", "value": "33000"},
+					{"symbol": "hp_M", "name": "metric horsepower", "equivalence": "(kgf*m/s)", "value": "75"},
+					{"symbol": "hp_E", "name": "electrical horsepower", "equivalence": "(W)", "value": "746"},
+					{"symbol": "hp_S", "name": "boiler horsepower", "equivalence": "(Btu/h)", "value": "33475"},
+					{"symbol": "hp_H", "name": "hydraulic horsepower", "equivalence": "(ft*lbf/s)", "value": "550"}
+				],
+				
+				"voltage":
+				[
+					{"symbol": "titulo", "name": "", "description": "VOLTAGE", "idHtml":"voltaje"},
+					{"symbol": "mV", "name": "millivolt", "equivalence": "(kg*(m*m)/A/(s*s*s))", "value": "1e-3"},
+					{"symbol": "V", "name": "volt", "equivalence": "(kg*(m*m)/A/(s*s*s))", "value": "1"},
+					{"symbol": "kV", "name": "volt", "equivalence": "(kg*(m*m)/A/(s*s*s))", "value": "1e3"},
+					{"symbol": "MV", "name": "volt", "equivalence": "(kg*(m*m)/A/(s*s*s))", "value": "1e6"},
+					{"symbol": "GV", "name": "volt", "equivalence": "(kg*(m*m)/A/(s*s*s))", "value": "1e9"},
+					{"symbol": "abV", "name": "abvolt", "equivalence": "(kg*(m*m)/A/(s*s*s))", "value": "1e-8"}
+				],
+				
+				"resistanceimpedance":
+				[
+					{"symbol": "titulo", "name": "", "description": "RESISTANCE & IMPEDANCE", "idHtml":"resistenciaelectrica"},
+					{"symbol": "nohm", "name": "nanohm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1e-9"},
+					{"symbol": "uohm", "name": "microhm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1e-6"},
+					{"symbol": "mohm", "name": "milliohm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1e-3"},
+					{"symbol": "ohm", "name": "ohm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1"},
+					{"symbol": "kohm", "name": "kilohm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1e3"},
+					{"symbol": "Mohm", "name": "megohm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1e6"},
+					{"symbol": "Gohm", "name": "gigaohm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1e9"},
+					{"symbol": "abohm", "name": "abohm", "equivalence": "(kg*(m*m)/(A*A)/(s*s*s))", "value": "1e-9"}
+				],
+				
+				"inductance":
+				[
+					{"symbol": "titulo", "name": "", "description": "INDUCTANCE", "idHtml":"inductancia"},
+					{"symbol": "H", "name": "henry", "equivalence": "(kg*(m*m)/(A*A)/(s*s))", "value": "1"},
+					{"symbol": "abH", "name": "abhenry", "equivalence": "(kg*(m*m)/(A*A)/(s*s))", "value": "1e-9"}
+				],
+				
+				"conductanceadmittance":
+				[
+					{"symbol": "titulo", "name": "", "description": "CONDUCTANCE & ADMITTANCE", "idHtml":"conductanciaadmitancia"},
+					{"symbol": "S", "name": "siemens", "equivalence": "1/((kg*(m*m)/(A*A)/(s*s*s)))", "value": "1"}
+				],
+				
+				"electriccharge":
+				[
+					{"symbol": "titulo", "name": "", "description": "ELECTRIC CHARGE", "idHtml":"cargaelectrica"}, 
+					{"symbol": "pC", "name": "picocoulomb", "equivalence": "(A*s)", "value": "1e-12"},
+					{"symbol": "nC", "name": "nanocoulomb", "equivalence": "(A*s)", "value": "1e-9"},
+					{"symbol": "uC", "name": "microcoulomb", "equivalence": "(A*s)", "value": "1e-6"},
+					{"symbol": "mC", "name": "millicoulomb", "equivalence": "(A*s)", "value": "1e-3"},
+					{"symbol": "C", "name": "coulomb", "equivalence": "(A*s)", "value": "1"},
+					{"symbol": "statC", "name": "statcoulomb", "equivalence": "(A*s)", "value": "(1/2997924580)"},
+					{"symbol": "abC", "name": "abcoulomb", "equivalence": "(A*s)", "value": "10"}
+				],
+				
+				"capacitance":
+				[
+					{"symbol": "titulo", "name": "", "description": "CAPACITANCE", "idHtml":"capacitancia"},
+					{"symbol": "uF", "name": "microfarad", "equivalence": "((s*s*s*s)*(A*A)/(m*m)/kg)", "value": "1e-6"},
+					{"symbol": "F", "name": "farad", "equivalence": "((s*s*s*s)*(A*A)/(m*m)/kg)", "value": "1"}
+				],
+				
+				"magneticflux":
+				[
+					{"symbol": "titulo", "name": "", "description": "MAGNETIC FLUX", "idHtml":"flujomagnetico"}, 
+					{"symbol": "nWb", "name": "nanoweber", "equivalence": "(kg*(m*m)/(s*s)/A)", "value": "1e-9"},
+					{"symbol": "uWb", "name": "microweber", "equivalence": "(kg*(m*m)/(s*s)/A)", "value": "1e-6"},
+					{"symbol": "mWb", "name": "milliweber", "equivalence": "(kg*(m*m)/(s*s)/A)", "value": "1e-3"},
+					{"symbol": "Wb", "name": "weber", "equivalence": "(kg*(m*m)/(s*s)/A)", "value": "1"},
+					{"symbol": "Mx", "name": "maxwell", "equivalence": "(kg*(m*m)/(s*s)/A)", "value": "1e-8"}
+				],
+				
+				"magneticfluxdensity":
+				[
+					{"symbol": "titulo", "name": "", "description": "MAGNETIC FLUX DENSITY", "idHtml":"densidadflujomagnetico"}, 
+					{"symbol": "nT", "name": "nanotesla", "equivalence": "(kg/A/s/s)", "value": "1e-9"},
+					{"symbol": "uT", "name": "microtesla", "equivalence": "(kg/A/s/s)", "value": "1e-6"},
+					{"symbol": "mT", "name": "millitesla", "equivalence": "(kg/A/s/s)", "value": "1e-3"},
+					{"symbol": "T", "name": "tesla", "equivalence": "(kg/A/s/s)", "value": "1"},
+					{"symbol": "nGa", "name": "nanogauss", "equivalence": "(kg/A/s/s)", "value": "1e-4*1e-9"},
+					{"symbol": "uGa", "name": "microgauss", "equivalence": "(kg/A/s/s)", "value": "1e-4*1e-6"},
+					{"symbol": "mGa", "name": "milligauss", "equivalence": "(kg/A/s/s)", "value": "1e-4*1e-3"},
+					{"symbol": "Ga", "name": "gauss", "equivalence": "(kg/A/s/s)", "value": "1e-4"}
+				]
+			}
+		};
+
+		//Definimos un miembro para el tipo de objeto 'Number'
+		Number.prototype.darFormato = function(c, d, t){
+		  var n = this, c = isNaN(c = Math.abs(c)) ? 2 : c, d = d == undefined ? "," : d, t = t == undefined ? "." : t, s = n < 0 ? "-" : "", i = parseInt(n = Math.abs(+n || 0).toFixed(c)) + "", j = (j = i.length) > 3 ? j % 3 : 0;
+		  return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
+		};
+
+			function cambiarTabIndex() {
+			  // Keep keyboard flow aligned with the visible workflow:
+			  // value in -> input units -> output units -> controls -> search.
+			  document.getElementById('valIn').tabIndex = 1;
+			  document.getElementById('in').tabIndex = 2;
+			  document.getElementById('out').tabIndex = 3;
+			  document.getElementById('btn-switch').tabIndex = 4;
+			  document.getElementById('btn-clear').tabIndex = 5;
+			  document.getElementById('btn-minus').tabIndex = 6;
+			  document.getElementById('btn-plus').tabIndex = 7;
+			  document.getElementById('busqueda').tabIndex = 8;
+			  document.getElementById('valOut').tabIndex = -1;
+			}
+
+		// El inicializador de eventos lo meto en una funcion para llamarlo controladamente.
+		// Despues de que la DB haya sido mostrada para que los elementos ya existan.
+		function escucharMouseSobreDb(){
+			$(".db-sub").on("mouseenter",
+				function () {
+					// Oculto y quito la seleccion a todo
+					$(".db-sub").removeClass('sel');
+					$(".db-mar-sim").addClass('oculto');
+					
+					// Muestro el contenido y marco como seleccionado
+					var id = "#marco-simbolos-" + $(this).attr('referencia');
+					$(id).removeClass("oculto");
+					$(this).addClass('sel');
+				})
+			
+			$(".db-sim").click(function(){
+				// Pongo el valor en el ultimo textbox seleccionado
+				var simbolo = $(this).find(':first-child').html(),
+				id = '#' + ultimoInput,
+				formula = $('#' + ultimoInput).val() + simbolo;
+				$(id).val(formula);
+				convertir();
+			});
+		};
+		
+		function mostrarDb(){
+			var primero = true, t;
+
+			for (var i in db) {
+				var d1=eval('db.' + i);
+				
+				for (var j in d1){
+					var d2=eval('db.' + i + "." + j);
+					
+					// Hago un nuevo titulo
+					if (primero) {
+						t = "<div class='db-sub sel' referencia='" + d2[0].idHtml + "'>" + "<span class='db-sub-span'>" + d2[0].description + "</span></div>";
+					} else {
+						t = "<div class='db-sub' referencia='" + d2[0].idHtml + "'>" + "<span class='db-sub-span'>" + d2[0].description + "</span></div>";
+					}
+					
+					$("#marco-titulos").append(t);
+					
+
+					// Hago un nuevo marco en marco-simbolos
+					id = 'marco-simbolos-' + d2[0].idHtml;
+
+					if (primero){
+						t = "<div class='db-mar-sim' id='" + id + "'></div>";
+						primero = false;
+					} else {
+						t = "<div class='db-mar-sim oculto' id='" + id + "'></div>"
+					}
+
+					$("#marco-simbolos").append(t);
+					
+					for (var k=1;k<d2.length;k++){
+						// Son simbolos. Los Meto en el marco previamente creado para ellos
+						$("#" + id + "").append("<div class='db-sim'><span class='db-sim-span'>" + d2[k].symbol + "</span><span class='db-nom-span'>" + d2[k].name + "</span></div>");
+					}
+				}
+			}
+
+
+			escucharMouseSobreDb();
+
+			// Primero incluyo la info en la base de datos
+			$.getJSON("http://openexchangerates.org/api/currencies.json?app_id=1d59aed1a5ae4bcc8e94cb56d9792f9d",function(a){
+				$.getJSON("http://openexchangerates.org/api/latest.json?app_id=1d59aed1a5ae4bcc8e94cb56d9792f9d",function(b){
+					db.units.currency=[{"symbol": "titulo", "name": "", "description": "CURRENCY", "idHtml":"moneda"}];
+					var valor, nombre;
+					for (var l in b.rates){
+						nombre = eval("a." + l);
+						valor = 1/eval("b.rates." + l);
+						db.units.currency.push({"symbol": l, "name": nombre, "equivalence": "USD", "value": valor});
+					}
+					
+					// ********************** REPETIDO DE ARRIBA ****************************
+										
+					// Ahora que tengo la base de datos con la informacion de las monedas, las muestro al usuario.
+					var d2=eval('db.units.currency');
+					
+					// Hago un nuevo titulo
+					$("#marco-titulos").append("<div class='db-sub' referencia='" + d2[0].idHtml + "'>" + "<span class='db-sub-span'>" + d2[0].description + "</span></div>");
+					
+					// Hago un nuevo marco en marco-simbolos
+					id = 'marco-simbolos-' + d2[0].idHtml;
+					$("#marco-simbolos").append("<div class='db-mar-sim oculto' id='" + id + "'></div>");
+					
+					for (var k=1;k<d2.length;k++){
+						// Son simbolos. Los Meto en el marco previamente creado para ellos
+						$("#" + id + "").append("<div class='db-sim'><span class='db-sim-span'>" + d2[k].symbol + "</span><span class='db-nom-span'>" + d2[k].name + "</span></div>");
+					}
+					
+					// **********************************************************************
+					
+					// Agregando el borde de abajo al ultimo <div>
+					$(".db-sub").last().addClass("borde-abajo");
+					
+					escucharMouseSobreDb();
+				})
+			})
+		}
+		
+
+		function convertirAEquivalentes(f) {
+			// Esta funcion devuelve la funcion en los terminos basicos de referencia de cada unidad, mas sus valores
+			// Ejemplo: MPa -> "(N/m/m) x 1000000"
+			//          km  -> "(m) x 1000"
+			
+			var i,
+				k,
+				r,
+				d2,
+				pp, // Posicion del signo de potencia '^'
+				pat, // Patron de busquead
+				uEle, // Unidad elevada
+				pEle, // Parentesis elevado
+				reem, // String de reemplazo
+				res, // Resultado de 'match()'
+				pot; // Valor de la potencia
+		
+			// 1. Reemplazo '^' por 'Math.pow(x,y)'
+			while (f.indexOf('^', 0) != -1){
+				
+				// '.indexOf()' se pasa erradamente algunas veces porque asocia substrings, pero el regular expression RegExp lo detiene.
+				pp = f.indexOf('^', 0);
+
+				if (f.charAt(pp-1)==')'){
+					// Se eleva todo un parentesis
+
+					pat = /\(([^\)\(]+)\)(?=\^)/; // Patron de: cosas dentro de parentesis y ese parentesis elevado a alguna potencia
+					pEle = f.match(pat); // Devuelve: el parentesis con contenido elevado a alguna potencia
+
+					pat = /\^[-+]?[0-9]*/; // Patron de: ^ y valor de la potencia
+					res = f.match(pat); // Devuelve: ^ y el valor de la potencia				
+					pot = res[0].slice(1,res[0].length); // Devuelve unicamente el valor de la potencia
+
+					pat = /\(([^\)\(]+)\)\^[-+]?[0-9]*/; // Patron de parentesis con contenido, ^ y valor de potencia
+					reem = '(Math.pow(' + pEle[0] + ',' + pot + '))';
+					f = f.replace(pat,reem);
+					
+				} else {
+					// Se eleva solo una unidad
+					
+					pat = /\b\w*\b(?=\^)/; // Patron de: unidad elevada a alguna potencia
+					uEle = f.match(pat); // Devuelve: la unidad elevada a alguna potencia
+
+					pat = /\^[-+]?[0-9]*/; // Patron de: ^ y valor de la potencia
+					res = f.match(pat); // Devuelve: ^ y el valor de la potencia				
+					pot = res[0].slice(1,res[0].length); // Devuelve: unicamente el valor de la potencia
+
+					pat = /(\b\w*\b)\^[-+]?[0-9]*/; // Patron: de unidad, ^ y valor de potencia
+					reem = '(Math.pow(' + uEle[0] + ',' + pot + '))';
+					f = f.replace(pat,reem);
+					
+				}
+			}
+			   
+			
+			// Hago el ciclo tres veces para cuando las definiciones no son directamente las unidades principales: kg, m, s, A, etc.
+			for (r=0; r<4; r++){
+				// 2. Busco cada definicion de unidades "named" en el string.
+				//    Reemplazo los 'named' por sus unidades equivalentes y su valor de relacion. Algunas 'equivalence' y 'value' son constantes o inclusive otras unidades 'named'			
+				for (i in db.named){
+					d2 = eval('db.named.' + i);
+					
+					for (k=1;k<d2.length;k++){
+						// Son simbolos
+						b7 = new RegExp("\\b" + d2[k].symbol + "\\b", "g");
+						f = f.replace(b7, "(" + d2[k].equivalence + "*" + d2[k].value + ")");
+					}
+				}
+				
+				// 3. Busco cada definicion de "constants" en el string.
+				//    Reemplazo las 'constants' por sus unidades equivalentes y su valor de relacion. Algunas 'equivalence' son 'named' y estas 'named' tienen de 'equivalence' otras 'constant'.
+				for (i in db.constants){
+					d2 = eval('db.constants.' + i);
+					
+					for (k=1;k<d2.length;k++){
+						// Son simbolos
+						b7 = new RegExp("\\b" + d2[k].symbol + "\\b", "g");
+						f = f.replace(b7, "(" + d2[k].equivalence + "*" + d2[k].value + ")");
+					}
+				}
+				
+				// 4. Busco cada definicion de "units" en el string.
+				//    Reemplazo las 'units' por sus unidades equivalentes y su valor de relacion
+				//    Supuestamente este punto no deberia estar en este ciclo, pero sucede que algunas unidades estan definidas a partir de constantes. Por ejemplo: angulos.
+				for (i in db.units){
+					d2 = eval('db.units.' + i);
+					
+					for (k=1;k<d2.length;k++){
+						// Son simbolos
+						b7 = new RegExp("\\b" + d2[k].symbol + "\\b", "g");
+						f = f.replace(b7, "(" + d2[k].equivalence + "*" + d2[k].value + ")");
+					}
+				}
+			}
+			
+			return f;
+		}
+
+		function valorarUnidades(f) {
+			// Esta funcion convierte en "1" todas las unidades basicas. Se supone que todo lo demas ya quedo reemplazado
+			var i, k, b1, d2;
+			
+			for (i in db.units){
+				d2 = eval('db.units.' + i);
+				
+				for (k=1;k<d2.length;k++){
+					// Son simbolos
+					b1 = new RegExp("\\b" + d2[k].symbol + "\\b", "g");
+					f = f.replace(b1, "1");
+				}
+			}
+			
+			return f;
+		}
+
+		function esTemperatura(s){
+			for (var i=1;i<db.units.temperature.length; i++){
+				if(s==db.units.temperature[i].symbol){
+					// Solo es una temperatura
+					return true;
+				}
+			}
+		}
+		
+		function temperatura(uIn, uOut, val){
+			var i, b1, K;
+			
+			for (i=1;i<db.units.temperature.length; i++){
+				if(uIn==db.units.temperature[i].symbol){
+					f=db.units.temperature[i].aKelvin;
+					b1 = new RegExp("\\bX\\b", "g");
+					f = f.replace(b1, val);
+					K = eval(f); // Valor en Kelvin
+				}
+			}
+			
+			for (i=1;i<db.units.temperature.length; i++){
+				if(uOut==db.units.temperature[i].symbol){
+					f=db.units.temperature[i].deKelvin;
+					b1 = new RegExp("\\bX\\b", "g");
+					f = f.replace(b1, K);
+					return eval(f); // Valor en la segunda unidad
+				}
+			}
+		}
+		
+		function convertir(){
+			$("#valOut").val("");
+			var formIn = "(" + $("#in").val() + ")",
+			formOut = "(" + $("#out").val() + ")",
+			valIn = $("#valIn").val();
+
+			//Dinero
+
+			// Verificando si solo es comparacion de temperaturas aisladas
+			if (esTemperatura($("#in").val()) && esTemperatura($("#out").val())){
+				var valOut = temperatura($("#in").val(), $("#out").val(), $("#valIn").val());
+			} else {
+				// Valorando las unidades y las constantes
+				formIn = valorarUnidades(convertirAEquivalentes(formIn));
+				formOut = valorarUnidades(convertirAEquivalentes(formOut));
+				var valOut = eval("(" + formIn + "*" + valIn + ")/" + formOut); 
+			}
+
+			// Mostrando el resultado
+			var d = ($("#decimals").html()).length - 2,
+			temp1 = Math.abs(parseInt(valOut.toFixed(d)*(Math.pow(10,d))));
+
+			// Revisando si mostramos el resultado en notacion cientifica o decimal
+			// En cientifica si:
+			// 1. No se ven al menos dos numeros con la precision mostrada
+			// 2. El numero es mayor de 1x10^15
+			
+			if (temp1<1 || valOut>1e15){
+				// Toca ponerlo en notacion cientifica
+				$("#valOut").val(valOut.toExponential(d));
+			} else {
+				// Puede dejarse asi
+				$("#valOut").val(valOut.darFormato(d,".",","));
+			}
+		}
+
+		function cambiarDecimales(delta){
+			var d = ($("#decimals").html()).length - 2 + delta,
+			t="0.",
+			i=0;
+
+			if (d==11){return false;}
+			
+			for (i;i<d;i++){
+				t=t+"0";
+			}
+			$("#decimals").html(t);
+			convertir();
+		}
+
+		$("#in").keyup(function () {
+		  convertir();
+		});
+
+		$("#out").keyup(function () {
+		  convertir();
+		});
+
+		$("#valIn").keyup(function () {  
+			convertir();
+		});
+
+		$("#how-to-use").click(function(){
+		  $("#help").toggleClass("oculto");
+		});
+		
+		$("#btn-switch").click(function(){
+		  var a = $("#in").val();
+		  $("#in").val($("#out").val());
+		  $("#out").val(a);
+		  $("#valIn").focus();
+		  convertir();
+		});
+
+		$("#btn-clear").click(function(){
+		  $("#in").val("");
+		  $("#out").val("");
+		  $("#valIn").val("");
+		  $("#valOut").val("");
+		  $("#busqueda").val("");
+		  $("#resultados").html("");
+		  // Eliminando la seleccion de la base de datos
+		  $(".db-sub").removeClass('sel');
+		  $(".db-mar-sim").addClass('oculto');
+		  $("#help").addClass('oculto');
+		  $("#in").focus();
+		});
+
+		$("#btn-plus").click(function(){
+			cambiarDecimales(1);
+		});
+
+		$("#btn-minus").click(function(){
+			cambiarDecimales(-1);
+		});
+
+		mostrarDb();
+		cambiarTabIndex();
+		
+		$("#in").click(function(){
+			// ultimoInput definido como variable global
+			ultimoInput='in';
+		});
+		
+		$("#out").click(function(){
+			// ultimoInput definido como variable global
+			ultimoInput='out';
+		});
+		
+		$("#busqueda").keyup(function(){
+			var b = $("#busqueda").val(),
+			r = "<table>",
+			pat,
+			res,
+			f, i, j, k, d1, d2;
+			/* Que recorra toda la base de datos buscando estas palabras.
+			 Debe buscar en: Simbolos y Nombre.
+			 El resultado debe ser una tabla de 3 columnas con: Tiulo / Simbolo / Nombre
+			*/
+
+			b=b.toUpperCase();
+			
+			if (b==""){
+				$("#resultados").html("");
+				return;
+			}
+			
+			for (i in db) {
+				d1=eval('db.' + i);
+
+				for (j in d1){
+					d2=eval('db.' + i + "." + j);
+					
+					for (k=1;k<d2.length;k++){
+						
+						f = j + " " +d2[k].symbol + " " + d2[k].name;
+						f=f.toUpperCase();
+						pat = new RegExp("" + b);
+						res = f.match(pat); // Si no encuentra, devuelve 'null'
+						
+						if (res != null){
+							r = r + "<tr> <td class='col1'>" + j + "</td> <td class='col2'>" + d2[k].symbol + "</td> <td class='col3'>" + d2[k].name + "</td>  </tr>";
+						}else{
+						}
+					}
+				}
+			}
+			
+			r = r + "<table>";
+			$("#resultados").html(r);
+		
+		});
+
+		
+	});
+
+</script>
+
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+</body>
+  
+</html>

@@ -1,9 +1,6 @@
 {
   "hosting": {
-    "public": "deploy",
-    "predeploy": [
-      "npm run build:deploy"
-    ],
+    "public": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
