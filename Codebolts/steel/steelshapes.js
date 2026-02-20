@@ -1286,6 +1286,7 @@ function drawDimensions(){
 	var thicknessReferenceX = X0 + thicknessReferenceXOffset*SCALE;
 	var rightWitnessStartX = Math.max(thicknessReferenceX, rightSectionFaceX + rightWitnessObjectGap);
 	var rightFreeDepthBottomWitnessStartX = isTeeSection ? (X0 + webRightOffset*SCALE + rightWitnessObjectGap) : rightWitnessStartX;
+	var showInsideDepthDimension = isChannelSectionType(sectionType) !== true;
 	
 	// 'b' dimension arrow. 
 	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
@@ -1339,7 +1340,14 @@ function drawDimensions(){
 	x2 = x1;
 	y2 = Y0;
 	drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
-	// The second arrow is drew by 'inside height' dimension
+	// The second arrow is usually drawn by the 'inside height' dimension.
+	if (showInsideDepthDimension !== true){
+		x1 = rightDimensionX;
+		y1 = freeDepthTopY + aOff*0.9;
+		x2 = x1;
+		y2 = freeDepthTopY;
+		drawArrow (context,x1,y1,x2,y2,style,1,angle,dist);
+	}
 	x1 = rightWitnessStartX;
 	x2 = rightDimensionTickX;
 	y1 = Y0;
@@ -1376,19 +1384,22 @@ function drawDimensions(){
 	ty = y1 - 15/2;
 	writeOneText('400', '15', 'Roboto', 'right', '#484848', formatDimensionValue(k), tx, ty);
 	
-	// 'inside height' : variable 'freeD' dimension arrow. 
-	// Function 'drawArrow()' takes care about pixel precision to draw the arrow
-	x1 = rightDimensionX;
-	y1 = freeDepthTopY;
-	x2 = x1;
-	y2 = freeDepthBottomY;
-	drawArrow (context,x1,y1,x2,y2,style,which,angle,dist);
-	x1 = rightFreeDepthBottomWitnessStartX;
-	x2 = rightDimensionTickX;
-	drawOneLine(x1,y2,x2,y2);
-	tx = rightDimensionTextX;
-	ty = (y1 + y2)/2 + 14/2;
-	writeOneText('400', '15', 'Roboto', 'left', '#484848', formatDimensionValue(freeD), tx, ty);
+	// 'inside height' : variable 'freeD' dimension arrow.
+	// Channel sections omit this derived dimension.
+	if (showInsideDepthDimension === true){
+		// Function 'drawArrow()' takes care about pixel precision to draw the arrow
+		x1 = rightDimensionX;
+		y1 = freeDepthTopY;
+		x2 = x1;
+		y2 = freeDepthBottomY;
+		drawArrow (context,x1,y1,x2,y2,style,which,angle,dist);
+		x1 = rightFreeDepthBottomWitnessStartX;
+		x2 = rightDimensionTickX;
+		drawOneLine(x1,y2,x2,y2);
+		tx = rightDimensionTextX;
+		ty = (y1 + y2)/2 + 14/2;
+		writeOneText('400', '15', 'Roboto', 'left', '#484848', formatDimensionValue(freeD), tx, ty);
+	}
 	
 }
 
